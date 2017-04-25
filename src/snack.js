@@ -2,11 +2,8 @@
  * @flow
  */
 
-import 'babel-polyfill';
-import { install as installSourceMapSupport } from 'source-map-support';
-
 if (process.env.NODE_ENV !== 'production') {
-  installSourceMapSupport();
+  // require('source-map-support').install();
 }
 
 module.exports = {
