@@ -139,7 +139,7 @@ describe('sendCodeAsync', () => {
     await session.sendCodeAsync(NEW_CODE);
     setMockDate(1000);
     stopMockingDate();
-    expect(session.pubnub.publish.mock.calls[0][0]).toEqual({
+    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',
@@ -156,7 +156,7 @@ describe('sendCodeAsync', () => {
     await session.sendCodeAsync(NEW_CODE_3);
     setMockDate(1000);
     stopMockingDate();
-    expect(session.pubnub.publish.mock.calls[0][0]).toEqual({
+    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',

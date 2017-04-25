@@ -10,6 +10,8 @@ import pull from 'lodash/pull';
 import constructExperienceURL from './utils/constructExperienceURL';
 import { defaultSDKVersion } from './configs/sdkVersions';
 
+let platform = null;
+
 // eslint-disable-next-line no-duplicate-imports
 import type { SDKVersion } from './configs/sdkVersions';
 import type {
@@ -265,7 +267,8 @@ export default class SnackSession {
   };
 
   _publishNotDebounced = () => {
-    const message = { type: 'CODE', code: this.code };
+    const metadata = this._getAnalyticsMetadata();
+    const message = { type: 'CODE', code: this.code, metadata };
     this.pubnub.publish(
       { channel: this.channel, message },
       (status, response) => {
@@ -276,6 +279,56 @@ export default class SnackSession {
         }
       }
     );
+  };
+
+  _getAnalyticsMetadata = () => {
+    let metadata = {
+      expoSdkVersion: this.sdkVersion,
+    };
+
+    try {
+      metadata = {
+        ...metadata,
+        webSnackSdkVersion: require('../package.json').version,
+      };
+    } catch (e) {
+      // Probably couldn't require version
+    }
+
+    if (typeof window !== 'undefined') {
+      metadata = {
+        ...metadata,
+        webHostname: window.location.hostname,
+      };
+    }
+
+    if (typeof navigator !== 'undefined') {
+      if (!platform) {
+        try {
+          platform = require('platform');
+        } catch (e) {
+          // platform has side effects. should be fine but try/catch just to be safe.
+        }
+      }
+
+      if (platform) {
+        const platformInfo = platform.parse(navigator.userAgent);
+        const os = platformInfo.os || {};
+        metadata = {
+          ...metadata,
+          webOSArchitecture: os.architecture,
+          webOSFamily: os.family,
+          webOSVersion: os.version,
+          webLayoutEngine: platformInfo.layout,
+          webDeviceType: platformInfo.product,
+          webBrowser: platformInfo.name,
+          webBrowserVersion: platformInfo.version,
+          webDescription: platformInfo.description,
+        };
+      }
+    }
+
+    return metadata;
   };
 
   _publish = debounce(this._publishNotDebounced, DEBOUNCE_INTERVAL);
