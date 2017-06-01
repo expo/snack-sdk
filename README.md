@@ -2,7 +2,7 @@
 The Expo Snack SDK. Use this to create a custom web interface for https://snack.expo.io/.
 
 ### Creating a new session
-```
+```javascript
 import { SnackSession } from 'snack-sdk';
 
 let session = new SnackSession({
@@ -22,13 +22,13 @@ await session.startAsync();
 `sessionId` can be specified if you want a consistent url. This is a global namespace so make sure to use a UUID or scope it somehow if you use this.
 
 ### Getting the URL for the mobile client
-```
+```javascript
 let url = await session.getUrlAsync();
 ```
 This url will open the current Snack Session in the Expo client when opened on a phone. You can create a QR code from this link or send it to the phone in another way. See `example/` for how to turn this into a QR code.
 
 ### Updating the code
-```
+```javascript
 await session.sendCodeAsync(code: String);
 ```
 This will push the new code to each connected mobile client. Any new clients that connect will also get the new code.
@@ -36,7 +36,7 @@ This will push the new code to each connected mobile client. Any new clients tha
 
 ### Listening for events
 Here are the Flow types for the error, log, and presence listeners:
-```
+```javascript
 type SnackSession = {
   addErrorListener: (listener: ExpoErrorListener) => ExpoSubscription,
   addLogListener: (listener: ExpoLogListener) => ExpoSubscription,
@@ -90,7 +90,7 @@ type ExpoPresenceEvent = {
 Each of these listeners is optional.
 
 ### Stopping the session
-```
+```javascript
 await session.stopAsync();
 ```
 This will shut down the PunNub connection.
