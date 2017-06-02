@@ -43,7 +43,7 @@ type SnackSession = {
   addPresenceListener: (listener: ExpoPresenceListener) => ExpoSubscription,
 };
 
-export type ExpoSubscription = {
+type ExpoSubscription = {
   remove: () => void,
 };
 
@@ -51,8 +51,6 @@ export type ExpoSubscription = {
 type ExpoErrorListener = (errors: Array<ExpoError>) => void;
 
 type ExpoLogListener = (log: ExpoDeviceLog) => void;
-
-type ExpoPresenceStatus = | “join” | “leave”
 
 type ExpoPresenceListener = (event: ExpoPresenceEvent) => void;
 
