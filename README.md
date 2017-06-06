@@ -85,7 +85,53 @@ type ExpoPresenceEvent = {
 };
 ```
 
-Each of these listeners is optional.
+Each of these listeners is optional. Here's an example of using a log listener:
+```javascript
+let logSubscription = session.addLogListener((log) => {
+  console.log(JSON.stringify(log));
+
+  // This will print: `{"device":{"id":"b9384faf-504f-4c41-a7ab-6344f0102456","name":"SM-G930U"},"method":"log","message":"hello!","arguments":["hello!"]}`
+  // on the web if `console.log('hello!')` is run from the code on the phone.
+});
+
+// later on...
+logSubscription.remove();
+// future `console.log`s on the phone will not trigger the listener
+```
+
+An error listener:
+```javascript
+let errorSubscription = session.addErrorListener((error) => {
+  console.log(JSON.stringify(error));
+
+  // This will print:
+  // `[]`
+  // when there is no error and
+  // `[{"message":"unknown: Unexpected token (7:7)...","endLine":7,"startLine":7,"endColumn":7,"startColumn":7}]`
+  // when there is an error. The `message` field is truncated in this document.
+});
+
+// later on...
+errorSubscription.remove();
+```
+
+A presence listener:
+```javascript
+let presenceSubscription = session.addPresenceListener((presence) => {
+  console.log(JSON.stringify(presence));
+
+  // This will print:
+  // `{"device":{"id":"b9384faf-504f-4c41-a7ab-6344f0102456","name":"SM-G930U"},"status":"join"}`
+  // when a device is connected and
+  // `{"device":{"id":"b9384faf-504f-4c41-a7ab-6344f0102456","name":"SM-G930U"},"status":"leave"}`
+  // when a device disconnects.
+});
+
+// later on...
+presenceSubscription.remove();
+```
+
+Please read the Flow types above for all possible fields returned in these listeners.
 
 ### Stopping the session
 ```javascript
