@@ -30,8 +30,11 @@ import type {
 
 const MIN_CHANNEL_LENGTH = 6;
 const DEBOUNCE_INTERVAL = 500;
+const DEFAULT_NAME = 'Unnamed Snack';
+const DEFAULT_DESCRIPTION = 'No description';
 
 export default class SnackSession {
+  enable_third_party_modules: boolean;
   code: string;
   snackId: ?string;
   sdkVersion: SDKVersion;
@@ -43,11 +46,15 @@ export default class SnackSession {
   logListeners: Array<ExpoLogListener> = [];
   presenceListeners: Array<ExpoPresenceListener> = [];
   host: string;
+  name: string;
+  description: string;
 
   // Public API
 
   constructor(options: ExpoSnackSessionArguments) {
     // TODO: check to make sure code was passed in
+
+    this.enable_third_party_modules = false;
 
     this.code = options.code;
     this.sdkVersion = options.sdkVersion || defaultSDKVersion;
@@ -55,6 +62,8 @@ export default class SnackSession {
     this.channel = options.sessionId || shortid.generate();
     this.host = options.host || 'snack.expo.io';
     this.snackId = options.snackId;
+    this.name = options.name || DEFAULT_NAME;
+    this.description = options.description || DEFAULT_DESCRIPTION;
 
     if (this.channel.length < MIN_CHANNEL_LENGTH) {
       throw new Error('Please use a channel id with more entropy');
@@ -172,6 +181,53 @@ export default class SnackSession {
         pull(this.presenceListeners, listener);
       },
     };
+  };
+
+  saveAsync = async () => {
+    const url = `https://expo.io/--/api/v2/snack/save`;
+    const manifest: {
+      sdkVersion: string,
+      name: string,
+      description: string,
+      dependencies?: Object,
+    } = {
+      sdkVersion: this.sdkVersion,
+      name: this.name,
+      description: this.description,
+    };
+
+    if (this.enable_third_party_modules) {
+      manifest.dependencies = {};
+    }
+
+    const payload = {
+      manifest,
+      code: this.code,
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+
+      if (data.id) {
+        return {
+          id: data.id,
+          url: `https://expo.io/@snack/${data.id}`,
+        };
+      } else {
+        throw new Error(
+          (data.errors && data.errors[0] && data.errors[0].message) ||
+            'Failed to save code'
+        );
+      }
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
   };
 
   // Private methods

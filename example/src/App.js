@@ -44,11 +44,10 @@ class App extends Component {
     super(props);
 
     const code = INITIAL_CODE;
-
     this._snack = new SnackSession({
       code,
       // sessionId is optional, will be assigned a random value if not specified
-      sessionId: Math.random().toString(36).substring(7),
+      sessionId: Math.random().toString(36).substr(2, 8),
     });
 
     this._logSubscription = this._snack.addLogListener(this._onLog);
@@ -63,6 +62,7 @@ class App extends Component {
       log: null,
       error: null,
       presence: null,
+      saveUrl: null,
     };
   }
 
@@ -110,6 +110,13 @@ class App extends Component {
     this._presenceSubscription.remove();
   };
 
+  _save = async () => {
+    let saveResult = await this._snack.saveAsync();
+    this.setState({
+      saveUrl: saveResult.url,
+    });
+  };
+
   render() {
     return (
       <div>
@@ -147,6 +154,20 @@ class App extends Component {
             Remove Listeners
           </a>
         </div>
+        <div>
+          <a href="#" onClick={this._save}>
+            Save
+          </a>
+        </div>
+        <div>
+          Save url: {this.state.saveUrl}
+        </div>
+        {
+          this.state.saveUrl &&
+          <div style={{ padding: 20 }}>
+            <QRCode value={this.state.saveUrl} />
+          </div>
+        }
       </div>
     );
   }

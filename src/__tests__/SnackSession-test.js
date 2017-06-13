@@ -1,6 +1,7 @@
 'use strict';
 
 import { defaultSDKVersion } from '../configs/sdkVersions';
+import fetchMock from 'fetch-mock';
 
 jest.mock('pubnub');
 
@@ -259,6 +260,59 @@ describe('error listener', () => {
     session.pubnub.__sendMessage(ERROR_MESSAGE);
 
     expect(errorListener.mock.calls.length).toEqual(2);
+  });
+});
+
+describe('saveAsync', () => {
+  it('sends the correct data to the server', async () => {
+    fetchMock.post('*', { id: 'abc123' });
+
+    let session = await startDefaultSessionAsync();
+    let saveResult = await session.saveAsync();
+    expect(saveResult).toEqual({
+      id: 'abc123',
+      url: 'https://expo.io/@snack/abc123',
+    });
+
+    let lastCall = fetchMock.lastCall('*');
+    expect(lastCall[0]).toEqual('https://expo.io/--/api/v2/snack/save');
+    expect(lastCall[1]).toEqual({
+      method: 'POST',
+      body:
+        '{"manifest":{"sdkVersion":"15.0.0","name":"Unnamed Snack","description":"No description"},"code":"code"}',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    fetchMock.restore();
+  });
+
+  it('uses name and description', async () => {
+    fetchMock.post('*', { id: 'abc123' });
+
+    let session = await startDefaultSessionAsync({
+      name: 'testname1',
+      description: 'testdescription1',
+    });
+    let saveResult = await session.saveAsync();
+    expect(saveResult).toEqual({
+      id: 'abc123',
+      url: 'https://expo.io/@snack/abc123',
+    });
+
+    let lastCall = fetchMock.lastCall('*');
+    expect(lastCall[0]).toEqual('https://expo.io/--/api/v2/snack/save');
+    expect(lastCall[1]).toEqual({
+      method: 'POST',
+      body:
+        '{"manifest":{"sdkVersion":"15.0.0","name":"testname1","description":"testdescription1"},"code":"code"}',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    fetchMock.restore();
   });
 });
 

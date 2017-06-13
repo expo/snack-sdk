@@ -11,6 +11,8 @@ export type ExpoSnackSessionArguments = {
   sessionId?: string, // Will be randomly generated if not provided
   host?: string,
   snackId?: string,
+  name?: string,
+  description?: string,
 };
 
 export type ExpoSubscription = {

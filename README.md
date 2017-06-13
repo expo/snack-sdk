@@ -33,6 +33,14 @@ await session.sendCodeAsync(code: String);
 ```
 This will push the new code to each connected mobile client. Any new clients that connect will also get the new code.
 
+### Saving the code to Expo's servers
+```javascript
+let saveResult = await session.saveAsync();
+
+console.log(saveResult);
+// This will print: `{"id":"abc123","url":"https://expo.io/@snack/abc123"}`
+```
+This will upload the current code to Expo's servers and return a url that points to that version of the code.
 
 ### Listening for events
 Here are the Flow types for the error, log, and presence listeners:
