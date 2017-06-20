@@ -1,5 +1,8 @@
 /**
  * @flow
+ *
+ * This tag is needed to prevent PubNub from showing up in docs
+ * @private
  */
 
 import PubNub from 'pubnub';
@@ -33,6 +36,17 @@ const DEBOUNCE_INTERVAL = 500;
 const DEFAULT_NAME = 'Unnamed Snack';
 const DEFAULT_DESCRIPTION = 'No description';
 
+/**
+ * Creates a snack session on the web. Multiple mobile devices can connect to the same session and each one will be updated when new code is pushed.
+ * @param {object} options
+ * @param {string} options.code The initial React Native code.
+ * @param {string} [options.name] Name shown if this Snack is saved.
+ * @param {string} [options.description] Descriptions shown if this Snack is saved.
+ * @param {string} [options.sessionId] Can be specified if you want a consistent url. This is a global namespace so make sure to use a UUID or scope it somehow if you use this.
+ * @param {string} [options.sdkVersion] Determines what version of React Native is used on the mobile client. Defaults to 15.0.0 which maps to React Native 0.42.0. If you specify a different version, make sure to save that version along with the code. Code from one SDK version is not guaranteed to work on others.
+ * @param {boolean} [options.verbose] Enable verbose logging mode.
+ */
+// host and snackId are not included in the docs since they are only used internally.
 export default class SnackSession {
   enable_third_party_modules: boolean;
   code: string;
@@ -50,7 +64,6 @@ export default class SnackSession {
   description: string;
 
   // Public API
-
   constructor(options: ExpoSnackSessionArguments) {
     // TODO: check to make sure code was passed in
 
@@ -128,15 +141,30 @@ export default class SnackSession {
     });
   }
 
+  /**
+   * Starts the session.
+   * @returns {Promise.<void>} A promise that resolves when the session is started.
+   * @function
+   */
   startAsync = async (): Promise<void> => {
     this.isStarted = true;
     this._subscribe();
   };
 
+  /**
+   * Stops the session.
+   * @returns {Promise.<void>} A promise that resolves when the session is stopped.
+   * @function
+   */
   stopAsync = async (): Promise<void> => {
     this._unsubscribe();
   };
 
+  /**
+   * Returns a url that will open the current Snack session in the Expo client when opened on a phone. You can create a QR code from this link or send it to the phone in another way. See https://github.com/expo/snack-sdk/tree/master/example for how to turn this into a QR code.
+   * @returns {Promise.<void>} A promise that contains the url when fulfilled.
+   * @function
+   */
   getUrlAsync = async (): Promise<string> => {
     const url = constructExperienceURL({
       sdkVersion: this.sdkVersion,
@@ -148,6 +176,12 @@ export default class SnackSession {
     return url;
   };
 
+  /**
+   * Push new code to each connected mobile client. Any clients that connect in the future will also get the new code.
+   * @param {string} code The new React Native code.
+   * @returns {Promise.<void>} A promise that resolves when the code has been sent. Does not wait for the mobile clients to update before resolving.
+   * @function
+   */
   sendCodeAsync = async (code: string): Promise<void> => {
     if (this.code !== code) {
       this.code = code;
@@ -156,6 +190,12 @@ export default class SnackSession {
     }
   };
 
+  /**
+   * Add a listener to get notified of error events.
+   * @param {function(array)} callback - The callback that handles new error events. If there are no errors this will be called with an empty array. Otherwise will be called with an array of objects that each contain a `message` field.
+   * @returns {object} A subscription object. Call `.remove()` on this object so stop getting new events.
+   * @function
+   */
   addErrorListener = (listener: ExpoErrorListener): ExpoSubscription => {
     this.errorListeners.push(listener);
     return {
@@ -165,6 +205,12 @@ export default class SnackSession {
     };
   };
 
+  /**
+   * Add a listener to get notified of log events.
+   * @param {function(object)} callback - The callback that handles new log events. Will be called with an object containing a `message` field.
+   * @returns {object} A subscription object. Call `.remove()` on this object so stop getting new events.
+   * @function
+   */
   addLogListener = (listener: ExpoLogListener): ExpoSubscription => {
     this.logListeners.push(listener);
     return {
@@ -174,6 +220,12 @@ export default class SnackSession {
     };
   };
 
+  /**
+   * Add a listener to get notified of presence events.
+   * @param {function(object)} callback - The callback that handles new presence events. Will be called with an object containing a `status` field.
+   * @returns {object} A subscription object. Call `.remove()` on this object so stop getting new events.
+   * @function
+   */
   addPresenceListener = (listener: ExpoPresenceListener): ExpoSubscription => {
     this.presenceListeners.push(listener);
     return {
@@ -183,6 +235,11 @@ export default class SnackSession {
     };
   };
 
+  /**
+   * Uploads the current code to Expo's servers and return a url that points to that version of the code.
+   * @returns {Promise.<object>} A promise that contains an object with a `url` field when fulfilled.
+   * @function
+   */
   saveAsync = async () => {
     const url = `https://expo.io/--/api/v2/snack/save`;
     const manifest: {
@@ -280,7 +337,10 @@ export default class SnackSession {
   _handleErrorMessage = ({
     error,
     device,
-  }: { error: string, device?: ExpoDevice }) => {
+  }: {
+    error: string,
+    device?: ExpoDevice,
+  }) => {
     if (error) {
       let rawErrorObject: ExpoPubnubError = JSON.parse(error);
       let errorObject: ExpoError = {

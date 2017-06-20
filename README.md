@@ -1,5 +1,11 @@
-# snack-sdk
+# Snack SDK
 The Expo Snack SDK. Use this to create a custom web interface for https://snack.expo.io/.
+
+## Documentation
+
+- [API](API.md)
+
+## User Guide
 
 ### Creating a new session
 ```javascript
