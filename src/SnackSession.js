@@ -16,6 +16,7 @@ import { parse, print } from 'recast';
 import * as babylon from 'babylon';
 
 import constructExperienceURL from './utils/constructExperienceURL';
+import sendFileUtils from './utils/sendFileUtils';
 import { defaultSDKVersion } from './configs/sdkVersions';
 
 let platform = null;
@@ -62,6 +63,7 @@ const MIN_CHANNEL_LENGTH = 6;
 const DEBOUNCE_INTERVAL = 500;
 const DEFAULT_NAME = 'Unnamed Snack';
 const DEFAULT_DESCRIPTION = 'No description';
+const MAX_PUBNUB_SIZE = 31500;
 
 /**
  * Creates a snack session on the web. Multiple mobile devices can connect to the same session and each one will be updated when new code is pushed.
@@ -77,6 +79,9 @@ const DEFAULT_DESCRIPTION = 'No description';
 export default class SnackSession {
   enable_third_party_modules: boolean;
   code: string;
+  s3code: ?string;
+  diff: ?string;
+  s3url: ?string;
   snackId: ?string;
   sdkVersion: SDKVersion;
   isVerbose: boolean;
@@ -207,6 +212,7 @@ export default class SnackSession {
    * @function
    */
   stopAsync = async (): Promise<void> => {
+    this.s3url = null;
     this._unsubscribe();
   };
 
@@ -232,6 +238,7 @@ export default class SnackSession {
    * @returns {Promise.<void>} A promise that resolves when the code has been sent. Does not wait for the mobile clients to update before resolving.
    * @function
    */
+
   sendCodeAsync = async (code: string): Promise<void> => {
     if (this.code !== code) {
       this.code = code;
@@ -263,6 +270,15 @@ export default class SnackSession {
 
       this._sendStateEvent();
     }
+  };
+
+  // Support for older SDK versions that don't use diff
+  useDiffFormat = () => {
+    const oldSend = ['14.0.0', '15.0.0', '16.0.0', '18.0.0'];
+    if (oldSend.includes(this.sdkVersion)) {
+      return false;
+    }
+    return true;
   };
 
   /**
@@ -454,6 +470,32 @@ export default class SnackSession {
     });
   };
 
+  //s3code: cache of code saved on s3
+  //s3url: url to code stored on s3
+  //diff: code diff sent to phone
+  _handleUploadCodeAsync = async () => {
+    if (this.s3url) {
+      // send diff against what is stored on s3
+      this.diff = sendFileUtils.getFileDiff(this.s3code, this.code);
+      const size = sendFileUtils.calcPayloadSize(this.channel, this.diff);
+      if (size > MAX_PUBNUB_SIZE) {
+        // if diff is too large upload new code to s3
+        this.s3code = this.code;
+        this.diff = '';
+        this.s3url = await sendFileUtils.uploadToS3(this.code);
+      }
+    } else {
+      this.diff = sendFileUtils.getFileDiff('', this.code);
+      const size = sendFileUtils.calcPayloadSize(this.channel, this.diff);
+      if (size > MAX_PUBNUB_SIZE) {
+        // Upload code to S3 because exceed max message size
+        this.s3code = this.code;
+        this.diff = '';
+        this.s3url = await sendFileUtils.uploadToS3(this.code);
+      }
+    }
+  };
+
   _handleLogMessage = (pubnubEvent: ExpoPubnubDeviceLog) => {
     let payload = pubnubEvent.payload || [];
 
@@ -528,7 +570,22 @@ export default class SnackSession {
       }
 
       const metadata = this._getAnalyticsMetadata();
-      const message = { type: 'CODE', code: this.code, metadata };
+      let message;
+      if (this.useDiffFormat()) {
+        await this._handleUploadCodeAsync();
+        message = {
+          type: 'CODE',
+          diff: this.diff,
+          s3url: this.s3url,
+          metadata,
+        };
+      } else {
+        message = {
+          type: 'CODE',
+          code: this.code,
+          metadata,
+        };
+      }
       this.pubnub.publish(
         { channel: this.channel, message },
         (status, response) => {
@@ -554,7 +611,9 @@ export default class SnackSession {
         if (status.error) {
           this._error(`Error publishing loading event: ${status.error}`);
         } else {
-          this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
+          this._log(
+            `Sent loading event with message: ${this.loadingMessage || ''}`
+          );
         }
       }
     );
@@ -637,9 +696,16 @@ export default class SnackSession {
 
       count++;
 
-      this._log(`Requesting dependency: ${this.snackagerSchemeAndHost}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`);
+      this._log(
+        `Requesting dependency: ${this
+          .snackagerSchemeAndHost}/bundle/${name}${version ?
+          `@${version}` :
+          ''}?platforms=ios,android`
+      );
       const res = await fetch(
-        `${this.snackagerSchemeAndHost}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
+        `${this.snackagerSchemeAndHost}/bundle/${name}${version ?
+          `@${version}` :
+          ''}?platforms=ios,android`
       );
 
       if (res.status === 200) {
@@ -812,7 +878,11 @@ export default class SnackSession {
           .length
       ) {
         // There are new dependencies from what we installed
-        this._log(`There are new dependencies from what we installed. Current dependencies: ${JSON.stringify(dependencies)}. Dependencies in state: ${JSON.stringify(this.dependencies)}.`);
+        this._log(
+          `There are new dependencies from what we installed. Current dependencies: ${JSON.stringify(
+            dependencies
+          )}. Dependencies in state: ${JSON.stringify(this.dependencies)}.`
+        );
         return null;
       }
 

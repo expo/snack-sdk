@@ -48,6 +48,7 @@ class App extends Component {
       code,
       // sessionId is optional, will be assigned a random value if not specified
       sessionId: Math.random().toString(36).substr(2, 8),
+      sdkVersion: '17.0.0',
     });
 
     this._logSubscription = this._snack.addLogListener(this._onLog);
@@ -162,12 +163,10 @@ class App extends Component {
         <div>
           Save url: {this.state.saveUrl}
         </div>
-        {
-          this.state.saveUrl &&
+        {this.state.saveUrl &&
           <div style={{ padding: 20 }}>
             <QRCode value={this.state.saveUrl} />
-          </div>
-        }
+          </div>}
       </div>
     );
   }

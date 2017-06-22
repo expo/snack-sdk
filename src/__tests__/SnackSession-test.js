@@ -2,6 +2,7 @@
 
 import { defaultSDKVersion } from '../configs/sdkVersions';
 import fetchMock from 'fetch-mock';
+import testCode from '../bigfile';
 
 jest.mock('pubnub');
 
@@ -9,8 +10,14 @@ const SnackSession = require('../SnackSession').default;
 
 const INITIAL_CODE = 'code';
 const NEW_CODE = 'new code!';
+const NEW_CODE_DIFF =
+  'Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -1,0 +1,1 @@\n\\ No newline at end of file\n+new code!\n';
 const NEW_CODE_2 = 'new code 2!';
+const NEW_CODE_2_DIFF =
+  'Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -1,0 +1,1 @@\n\\ No newline at end of file\n+new code 2!\n';
 const NEW_CODE_3 = 'new code 3!';
+const NEW_CODE_3_DIFF =
+  'Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -1,0 +1,1 @@\n\\ No newline at end of file\n+new code 3!\n';
 const SESSION_ID = '123456';
 const SNACK_ID = 'abcdef';
 const ORIGINAL_DATE_NOW = Date.now;
@@ -54,6 +61,10 @@ function setMockDate(date) {
 function stopMockingDate() {
   jest.useRealTimers();
   Date.now = ORIGINAL_DATE_NOW;
+}
+
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 describe('when a sessionId is specified', () => {
@@ -149,19 +160,128 @@ describe('sendCodeAsync', () => {
     });
   });
 
+  it('sends the correct message to the device when using diffs', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync({ sdkVersion: '17.0.0' });
+    await session.sendCodeAsync(NEW_CODE);
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
+      channel: SESSION_ID,
+      message: {
+        type: 'CODE',
+        diff: NEW_CODE_DIFF,
+        s3url: undefined,
+      },
+    });
+  });
+
+  it('large file upload to s3', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync({ sdkVersion: '17.0.0' });
+    fetchMock.post('*', {
+      url:
+        'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
+      hash: '225764978e2bee1bcf2b1372048f7cd9',
+    });
+    await session.sendCodeAsync(testCode.largeCode);
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    fetchMock.restore();
+    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
+      channel: SESSION_ID,
+      message: {
+        type: 'CODE',
+        diff: '',
+        s3url:
+          'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
+      },
+    });
+  });
+
+  it('diff creation when file is on s3', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync({ sdkVersion: '17.0.0' });
+    fetchMock.post('*', {
+      url:
+        'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
+      hash: '225764978e2bee1bcf2b1372048f7cd9',
+    });
+    await session.sendCodeAsync(testCode.largeCode);
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    fetchMock.restore();
+    startMockingDate();
+    await session.sendCodeAsync(testCode.largeCodeChanged);
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    fetchMock.restore();
+    expect(session.pubnub.publish.mock.calls[1][0]).toMatchObject({
+      channel: SESSION_ID,
+      message: {
+        type: 'CODE',
+        diff:
+          "Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -11,0 +11,1 @@\n+ And we're modifying this huge block of text. \n",
+        s3url:
+          'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
+      },
+    });
+  });
+
+  it('reupload to s3 when diff is too big', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync({ sdkVersion: '17.0.0' });
+    fetchMock.post('*', {
+      url:
+        'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
+      hash: '225764978e2bee1bcf2b1372048f7cd9',
+    });
+    await session.sendCodeAsync(testCode.largeCode);
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    fetchMock.restore();
+    startMockingDate();
+    fetchMock.post('*', {
+      url:
+        'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/dee64f147ae2e4f0a76c4837c0991f7d',
+      hash: 'dee64f147ae2e4f0a76c4837c0991f7d',
+    });
+    await session.sendCodeAsync(testCode.largeCodeChangedReupload);
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    fetchMock.restore();
+    expect(session.pubnub.publish.mock.calls[1][0]).toMatchObject({
+      channel: SESSION_ID,
+      message: {
+        type: 'CODE',
+        diff: '',
+        s3url:
+          'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/dee64f147ae2e4f0a76c4837c0991f7d',
+      },
+    });
+  });
+
   it('debounces multiple updates', async () => {
     startMockingDate();
-    let session = await startDefaultSessionAsync();
+    let session = await startDefaultSessionAsync({ sdkVersion: '17.0.0' });
     await session.sendCodeAsync(NEW_CODE);
     await session.sendCodeAsync(NEW_CODE_2);
     await session.sendCodeAsync(NEW_CODE_3);
     setMockDate(1000);
     stopMockingDate();
+    await timeout(50);
     expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',
-        code: NEW_CODE_3,
+        s3url: undefined,
+        diff: NEW_CODE_3_DIFF,
       },
     });
   });
