@@ -13,6 +13,8 @@ export type ExpoSnackSessionArguments = {
   snackId?: string,
   name?: string,
   description?: string,
+  dependencies?: any, // TODO: more specific
+  enable_third_party_modules?: boolean,
 };
 
 export type ExpoSubscription = {
@@ -25,6 +27,8 @@ export type ExpoErrorListener = (errors: Array<ExpoError>) => void;
 export type ExpoLogListener = (log: ExpoDeviceLog) => void;
 
 export type ExpoPresenceListener = (event: ExpoPresenceEvent) => void;
+
+export type ExpoStateListener = (event: ExpoStateEvent) => void;
 
 export type ExpoErrorLocation = {
   line: number,
@@ -67,6 +71,7 @@ export type ExpoDeviceLog = {
 export type ExpoDevice = {
   name: string,
   id: string,
+  platform: string,
 };
 
 export type ExpoPresenceStatus = 'join' | 'leave';
@@ -74,4 +79,15 @@ export type ExpoPresenceStatus = 'join' | 'leave';
 export type ExpoPresenceEvent = {
   device: ExpoDevice,
   status: ExpoPresenceStatus,
+};
+
+export type ExpoStateEvent = {
+  code: string,
+  sdkVersion: SDKVersion,
+  name: string,
+  description: string,
+  dependencies: any, // TODO: more specific
+  isSaved: boolean,
+  isResolving: boolean,
+  isInstalling: boolean,
 };

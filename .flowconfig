@@ -2,6 +2,8 @@
 <PROJECT_ROOT>/build/.*
 
 .*/node_modules/reqwest/tests/.*
+.*/node_modules/documentation/.*
+.*/node_modules/pubnub/.*
 
 [options]
 esproposal.decorators=ignore
@@ -14,3 +16,6 @@ unsafe.enable_getters_and_setters=true
 suppress_comment=.*\\$FlowFixMe
 suppress_comment=.*\\$FlowIssue
 suppress_comment=\\(.\\|\n\\)*\\$FlowNewLine
+
+[libs]
+./flow-typed/

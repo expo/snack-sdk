@@ -1,6 +1,6 @@
 {
   "name": "snack-sdk",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "The Expo Snack SDK",
   "main": "build/snack.js",
   "files": [
@@ -18,9 +18,11 @@
   "license": "MIT",
   "dependencies": {
     "babel-runtime": "^6.23.0",
+    "babylon": "^6.17.2",
     "lodash": "^4.16.1",
     "platform": "^1.3.4",
     "pubnub": "^4.3.3",
+    "recast": "^0.12.4",
     "shortid": "^2.2.8",
     "source-map-support": "^0.4.2"
   },

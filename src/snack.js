@@ -16,4 +16,10 @@ module.exports = {
   get SnackTypes() {
     return require('./types');
   },
+  get babylonConfig() {
+    return require('./configs/babylon').default;
+  },
+  get insertImport() {
+    return require('./utils/insertImport').default;
+  },
 };

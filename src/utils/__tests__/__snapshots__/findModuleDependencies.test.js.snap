@@ -1,0 +1,49 @@
+exports[`test finds all imported modules 1`] = `
+Array [
+  Object {
+    "name": "base64",
+    "version": "1.2.3",
+  },
+  Object {
+    "name": "lodash/debounce",
+    "version": "2.3.4",
+  },
+  Object {
+    "name": "react-redux",
+    "version": null,
+  },
+]
+`;
+
+exports[`test finds all required modules 1`] = `
+Array [
+  Object {
+    "name": "base64",
+    "version": "1.2.3",
+  },
+  Object {
+    "name": "lodash/debounce",
+    "version": "2.3.4",
+  },
+  Object {
+    "name": "react-redux",
+    "version": null,
+  },
+]
+`;
+
+exports[`test writes versions for imported modules 1`] = `
+"
+    import base64 from \'base64\'; // 1.2.3
+    import debounce from \'lodash/debounce\'; // 2.3.4
+    import { connect } from \'react-redux\';
+  "
+`;
+
+exports[`test writes versions for required modules 1`] = `
+"
+    const base64 = require(\'base64\'); // 1.2.3
+    const debounce = require(\'lodash/debounce\'); // 2.3.4
+    const { connect } = require(\'react-redux\');
+  "
+`;
