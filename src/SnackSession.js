@@ -13,6 +13,7 @@ import isEqual from 'lodash/isEqual';
 import difference from 'lodash/difference';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
+import process from 'process';
 
 import constructExperienceURL from './utils/constructExperienceURL';
 import { defaultSDKVersion } from './configs/sdkVersions';
@@ -94,6 +95,7 @@ export default class SnackSession {
   isResolving: boolean;
   isInstalling: boolean;
   apiSchemeAndHost: string;
+  snackagerSchemeAndHost: string;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
@@ -109,6 +111,7 @@ export default class SnackSession {
     this.channel = options.sessionId || shortid.generate();
     this.host = options.host || 'snack.expo.io';
     this.apiSchemeAndHost = 'https://expo.io';
+    this.snackagerSchemeAndHost = 'https://snackager.expo.io';
     this.snackId = options.snackId;
     this.name = options.name || DEFAULT_NAME;
     this.description = options.description || DEFAULT_DESCRIPTION;
@@ -611,7 +614,7 @@ export default class SnackSession {
 
       const res = await fetch(
         // TODO: move to some config file
-        `https://snackager.expo.io/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
+        `${this.snackagerSchemeAndHost}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
       );
 
       if (res.status === 200) {
