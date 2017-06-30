@@ -612,8 +612,8 @@ export default class SnackSession {
 
       count++;
 
+      this._log(`Requesting dependency: ${this.snackagerSchemeAndHost}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`);
       const res = await fetch(
-        // TODO: move to some config file
         `${this.snackagerSchemeAndHost}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
       );
 
@@ -674,7 +674,7 @@ export default class SnackSession {
         );
     } catch (e) {
       // Likely a parse error
-      console.log(e);
+      this._error(e);
       this.isResolving = false;
       this._sendStateEvent();
       return;
@@ -684,6 +684,9 @@ export default class SnackSession {
     if (!modules.length || isEqual(modules, Object.values(this.dependencies))) {
       this.isResolving = false;
       this._sendStateEvent();
+      this._log(
+        `All dependencies are already loaded: ${JSON.stringify(modules)}`
+      );
       return;
     }
 
@@ -712,11 +715,14 @@ export default class SnackSession {
     try {
       // Fetch the dependencies
       // This will also trigger bundling
+      this._log(`Fetching dependencies: ${JSON.stringify(modules)}`);
       const results = await Promise.all(
         modules.map(module =>
           this._maybeFetchDependencyAsync(module.name, module.version)
         )
       );
+      this._log(`Got dependencies: ${JSON.stringify(results)}`);
+
       let peerDependencies = {};
 
       // Some items might have peer dependencies
@@ -736,6 +742,9 @@ export default class SnackSession {
       this._sendStateEvent();
 
       // Fetch the peer dependencies
+      this._log(
+        `Fetching peer dependencies: ${JSON.stringify(peerDependencies)}`
+      );
       peerDependencies = await Promise.all(
         Object.keys(peerDependencies).map(name =>
           /* $FlowFixMe */
@@ -759,14 +768,22 @@ export default class SnackSession {
           .length
       ) {
         // There are new dependencies from what we installed
+        this._log(`There are new dependencies from what we installed. Current dependencies: ${JSON.stringify(dependencies)}. Dependencies in state: ${JSON.stringify(this.dependencies)}.`);
         return;
       }
 
+      this._log('Writing module versions');
       let code = moduleUtils.writeModuleVersions(this.code, dependencies);
+
       // We need to insert peer dependencies in code when found
       if (peerDependencies.length) {
         const ast = parse(this.code, { parser });
 
+        this._log(
+          `Adding imports for peer dependencies: ${JSON.stringify(
+            peerDependencies
+          )}`
+        );
         peerDependencies.forEach(it =>
           insertImport(ast, {
             // Insert an import statement for the module
@@ -783,7 +800,7 @@ export default class SnackSession {
       this._sendStateEvent();
     } catch (e) {
       // TODO: Show user that there is an error getting dependencies
-      console.error(e);
+      this._error(e);
     } finally {
       this.isResolving = false;
       this.isInstalling = false;
