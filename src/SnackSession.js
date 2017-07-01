@@ -93,9 +93,9 @@ export default class SnackSession {
   dependencies: any; // TODO: more specific
   initialState: InitialState;
   isResolving: boolean;
-  isInstalling: boolean;
   apiSchemeAndHost: string;
   snackagerSchemeAndHost: string;
+  loadingMessage: ?string;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
@@ -103,7 +103,6 @@ export default class SnackSession {
 
     this.enable_third_party_modules = !!options.enable_third_party_modules;
     this.isResolving = false; // TODO: important?
-    this.isInstalling = false; // TODO: important?
 
     this.code = options.code;
     this.sdkVersion = options.sdkVersion || defaultSDKVersion;
@@ -130,7 +129,7 @@ export default class SnackSession {
 
     if (this.enable_third_party_modules) {
       // TODO: do we actually need this here?
-      this._handleFindDependenciesNotDebouncedAsync();
+      this._handleFindDependenciesAsync();
     }
 
     this.pubnub = new PubNub({
@@ -236,12 +235,8 @@ export default class SnackSession {
   sendCodeAsync = async (code: string): Promise<void> => {
     if (this.code !== code) {
       this.code = code;
-      if (this.enable_third_party_modules) {
-        this._handleFindDependencies();
-      }
+      // TODO: figure out how to route errors from _publishNotDebouncedAsync back here.
       this._publish();
-      // TODO: figure out how to route errors from _publishNotDebounced back here.
-
       this._sendStateEvent();
     }
   };
@@ -394,7 +389,6 @@ export default class SnackSession {
       dependencies: this.dependencies,
       isSaved: this._isSaved(),
       isResolving: this.isResolving,
-      isInstalling: this.isInstalling,
     };
   };
 
@@ -508,11 +502,11 @@ export default class SnackSession {
   };
 
   _handleResendCodeMessage = () => {
-    this._publishNotDebounced();
+    this._publishNotDebouncedAsync();
   };
 
   _handleJoinMessage = (device: ExpoDevice) => {
-    this._publishNotDebounced();
+    this._publishNotDebouncedAsync();
     this._sendPresenceEvent(device, 'join');
   };
 
@@ -520,16 +514,47 @@ export default class SnackSession {
     this._sendPresenceEvent(device, 'leave');
   };
 
-  _publishNotDebounced = () => {
-    const metadata = this._getAnalyticsMetadata();
-    const message = { type: 'CODE', code: this.code, metadata };
+  _publishNotDebouncedAsync = async () => {
+    if (this.loadingMessage) {
+      this._sendLoadingEvent();
+    } else {
+      if (this.enable_third_party_modules) {
+        await this._handleFindDependenciesAsync();
+      }
+
+      if (this.isResolving) {
+        // shouldn't ever happen
+        return;
+      }
+
+      const metadata = this._getAnalyticsMetadata();
+      const message = { type: 'CODE', code: this.code, metadata };
+      this.pubnub.publish(
+        { channel: this.channel, message },
+        (status, response) => {
+          if (status.error) {
+            this._error(status.error);
+          } else {
+            this._log('Published successfully!');
+          }
+        }
+      );
+    }
+  };
+
+  _sendLoadingEvent = () => {
+    if (!this.loadingMessage) {
+      return;
+    }
+
+    const payload = { type: 'LOADING_MESSAGE', message: this.loadingMessage };
     this.pubnub.publish(
-      { channel: this.channel, message },
+      { channel: this.channel, message: payload },
       (status, response) => {
         if (status.error) {
           this._error(status.error);
         } else {
-          this._log('Published successfully!');
+          this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
         }
       }
     );
@@ -585,7 +610,7 @@ export default class SnackSession {
     return metadata;
   };
 
-  _publish = debounce(this._publishNotDebounced, DEBOUNCE_INTERVAL);
+  _publish = debounce(this._publishNotDebouncedAsync, DEBOUNCE_INTERVAL);
 
   _error = (message: string) => {
     if (this.isVerbose) {
@@ -646,17 +671,48 @@ export default class SnackSession {
         })
         .catch(e => {
           // If an error occurs, delete the promise cache
-          this._promises[id] = null;
-          console.log(e);
-          //throw e;
+          this._promises[id] = {
+            name,
+            version: 'LATEST',
+            error: e.toString(),
+          };
+          this._error(e);
+          return this._promises[id];
         });
     return this._promises[id];
   };
 
-  _handleFindDependenciesNotDebouncedAsync = async () => {
+  _handleFindDependenciesAsync = async () => {
     if (!this.enable_third_party_modules) {
       return;
     }
+
+    while (true) {
+      let codeAtStartOfFindDependencies = this.code;
+      let codeWithVersions = await this._findDependenciesOnceAsync();
+      if (this.code === codeAtStartOfFindDependencies) {
+        // can be null if no changes need to be made
+        if (codeWithVersions) {
+          this.code = codeWithVersions;
+          this._sendStateEvent();
+        }
+
+        this.loadingMessage = null;
+
+        return;
+      }
+    }
+  };
+
+  _findDependenciesOnceAsync = async (): Promise<?string> => {
+    if (!this.enable_third_party_modules) {
+      return null;
+    }
+
+    if (this.isResolving) {
+      return null;
+    }
+    this.isResolving = true;
 
     const reserved = ['react', 'react-native', 'expo'];
 
@@ -677,7 +733,7 @@ export default class SnackSession {
       this._error(e);
       this.isResolving = false;
       this._sendStateEvent();
-      return;
+      return null;
     }
 
     // Check if the dependencies already exist
@@ -687,14 +743,13 @@ export default class SnackSession {
       this._log(
         `All dependencies are already loaded: ${JSON.stringify(modules)}`
       );
-      return;
+      return null;
     }
 
     // Set dependencies to what we found
     // This will trigger sending the 'START' message
     // TODO: what does this block do?
 
-    this.isResolving = true;
     this.dependencies = modules.reduce(
       (acc, curr) => ({
         ...acc,
@@ -711,6 +766,8 @@ export default class SnackSession {
     );
 
     this._sendStateEvent();
+    this.loadingMessage = `Installing dependencies`;
+    this._sendLoadingEvent();
 
     try {
       // Fetch the dependencies
@@ -722,6 +779,7 @@ export default class SnackSession {
         )
       );
       this._log(`Got dependencies: ${JSON.stringify(results)}`);
+      // results will have an error key if they failed
 
       let peerDependencies = {};
 
@@ -769,7 +827,7 @@ export default class SnackSession {
       ) {
         // There are new dependencies from what we installed
         this._log(`There are new dependencies from what we installed. Current dependencies: ${JSON.stringify(dependencies)}. Dependencies in state: ${JSON.stringify(this.dependencies)}.`);
-        return;
+        return null;
       }
 
       this._log('Writing module versions');
@@ -795,21 +853,17 @@ export default class SnackSession {
         code = print(ast).code;
       }
 
-      this.code = code;
       this.dependencies = dependencies;
+      this.isResolving = false;
       this._sendStateEvent();
+
+      return code;
     } catch (e) {
       // TODO: Show user that there is an error getting dependencies
       this._error(e);
     } finally {
       this.isResolving = false;
-      this.isInstalling = false;
       this._sendStateEvent();
     }
   };
-
-  _handleFindDependencies = debounce(
-    this._handleFindDependenciesNotDebouncedAsync,
-    1000
-  );
 }

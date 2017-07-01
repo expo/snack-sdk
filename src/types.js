@@ -89,5 +89,4 @@ export type ExpoStateEvent = {
   dependencies: any, // TODO: more specific
   isSaved: boolean,
   isResolving: boolean,
-  isInstalling: boolean,
 };
