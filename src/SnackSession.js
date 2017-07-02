@@ -830,12 +830,11 @@ export default class SnackSession {
         return null;
       }
 
-      this._log('Writing module versions');
-      let code = moduleUtils.writeModuleVersions(this.code, dependencies);
+      let code = this.code;
 
       // We need to insert peer dependencies in code when found
       if (peerDependencies.length) {
-        const ast = parse(this.code, { parser });
+        const ast = parse(code, { parser });
 
         this._log(
           `Adding imports for peer dependencies: ${JSON.stringify(
@@ -852,6 +851,9 @@ export default class SnackSession {
 
         code = print(ast).code;
       }
+
+      this._log('Writing module versions');
+      code = moduleUtils.writeModuleVersions(code, dependencies);
 
       this.dependencies = dependencies;
       this.isResolving = false;
