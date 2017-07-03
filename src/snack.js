@@ -22,4 +22,7 @@ module.exports = {
   get insertImport() {
     return require('./utils/insertImport').default;
   },
+  get findAndWriteDependencyVersions() {
+    return require('./utils/findAndWriteDependencyVersions').default;
+  },
 };

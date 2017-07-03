@@ -38,7 +38,7 @@ import type {
 } from './types';
 
 import insertImport from './utils/insertImport';
-import moduleUtils from './utils/findModuleDependencies';
+import moduleUtils from './utils/findAndWriteDependencyVersions';
 import config from './configs/babylon';
 
 type InitialState = {
