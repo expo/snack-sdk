@@ -14,7 +14,6 @@ export type ExpoSnackSessionArguments = {
   name?: string,
   description?: string,
   dependencies?: any, // TODO: more specific
-  enable_third_party_modules?: boolean,
 };
 
 export type ExpoSubscription = {

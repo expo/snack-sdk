@@ -14,6 +14,7 @@ import pickBy from 'lodash/pickBy';
 import difference from 'lodash/difference';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
+import semver from 'semver';
 
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
@@ -77,7 +78,6 @@ const MAX_PUBNUB_SIZE = 31500;
  */
 // host and snackId are not included in the docs since they are only used internally.
 export default class SnackSession {
-  enable_third_party_modules: boolean;
   code: string;
   s3code: ?string;
   diff: ?string;
@@ -106,7 +106,6 @@ export default class SnackSession {
   constructor(options: ExpoSnackSessionArguments) {
     // TODO: check to make sure code was passed in
 
-    this.enable_third_party_modules = !!options.enable_third_party_modules;
     this.isResolving = false; // TODO: important?
 
     this.code = options.code;
@@ -132,7 +131,7 @@ export default class SnackSession {
       throw new Error('Please use a channel id with more entropy');
     }
 
-    if (this.enable_third_party_modules) {
+    if (this._shouldUseThirdPartyModules()) {
       // TODO: do we actually need this here?
       this._handleFindDependenciesAsync();
     }
@@ -253,6 +252,7 @@ export default class SnackSession {
       this.sdkVersion = sdkVersion;
 
       this._sendStateEvent();
+      this._handleFindDependenciesAsync();
     }
   };
 
@@ -344,7 +344,7 @@ export default class SnackSession {
       description: this.description,
     };
 
-    if (this.enable_third_party_modules) {
+    if (this._shouldUseThirdPartyModules()) {
       manifest.dependencies = this.dependencies;
     }
 
@@ -404,6 +404,12 @@ export default class SnackSession {
   };
 
   // Private methods
+
+  _shouldUseThirdPartyModules = (): boolean => {
+    return (
+      this.sdkVersion === '17.0.0' || semver.gte(this.sdkVersion, '19.0.0')
+    );
+  };
 
   _sendErrorEvent = (errors: Array<ExpoError>): void => {
     this.errorListeners.forEach(listener => listener(errors));
@@ -566,7 +572,7 @@ export default class SnackSession {
     if (this.loadingMessage) {
       this._sendLoadingEvent();
     } else {
-      if (this.enable_third_party_modules) {
+      if (this._shouldUseThirdPartyModules()) {
         await this._handleFindDependenciesAsync();
       }
 
@@ -755,7 +761,7 @@ export default class SnackSession {
   };
 
   _handleFindDependenciesAsync = async () => {
-    if (!this.enable_third_party_modules) {
+    if (!this._shouldUseThirdPartyModules()) {
       return;
     }
 
@@ -778,7 +784,7 @@ export default class SnackSession {
   };
 
   _findDependenciesOnceAsync = async (): Promise<?string> => {
-    if (!this.enable_third_party_modules) {
+    if (!this._shouldUseThirdPartyModules()) {
       return null;
     }
 
