@@ -9,7 +9,7 @@ const findModuleDependencies = (code: string): { [string]: string } => {
   const dependencies: { [string]: string } = {};
   const ast = parse(code, config);
   // Makes sure version specified is valid
-  const versionMatch = RegExp(/^\s*(\d+\.)?(\d+\.)?(\*|\d+)$/);
+  const versionMatch = RegExp(/^(\s*(\d+\.)?(\d+\.)?(\*|\d+))|(LATEST)$/);
 
   types.visit(ast, {
     visitImportDeclaration(path) {
