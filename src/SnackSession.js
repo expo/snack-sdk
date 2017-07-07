@@ -10,10 +10,10 @@ import shortid from 'shortid';
 import debounce from 'lodash/debounce';
 import pull from 'lodash/pull';
 import isEqual from 'lodash/isEqual';
+import pickBy from 'lodash/pickBy';
 import difference from 'lodash/difference';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
-import process from 'process';
 
 import constructExperienceURL from './utils/constructExperienceURL';
 import { defaultSDKVersion } from './configs/sdkVersions';
@@ -533,7 +533,7 @@ export default class SnackSession {
         { channel: this.channel, message },
         (status, response) => {
           if (status.error) {
-            this._error(status.error);
+            this._error(`Error publishing code: ${status.error}`);
           } else {
             this._log('Published successfully!');
           }
@@ -552,7 +552,7 @@ export default class SnackSession {
       { channel: this.channel, message: payload },
       (status, response) => {
         if (status.error) {
-          this._error(status.error);
+          this._error(`Error publishing loading event: ${status.error}`);
         } else {
           this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
         }
@@ -676,7 +676,7 @@ export default class SnackSession {
             version: 'LATEST',
             error: e.toString(),
           };
-          this._error(e);
+          this._error(`Error fetching dependency: ${e}`);
           return this._promises[id];
         });
     return this._promises[id];
@@ -687,6 +687,7 @@ export default class SnackSession {
       return;
     }
 
+    // loop until we've found dependencies for the current version of the code
     while (true) {
       let codeAtStartOfFindDependencies = this.code;
       let codeWithVersions = await this._findDependenciesOnceAsync();
@@ -716,28 +717,25 @@ export default class SnackSession {
 
     const reserved = ['react', 'react-native', 'expo'];
 
-    // Array of module objects
-    // TODO: define module object schema in flow
-    let modules: Array<Module>;
+    let modules: { [string]: string };
     try {
       // Find all module imports in the code
       // This will skip local imports and reserved ones
-      modules = moduleUtils
-        .findModuleDependencies(this.code)
-        .filter(
-          module =>
-            !module.name.startsWith('.') && !reserved.includes(module.name)
-        );
+      modules = pickBy(
+        moduleUtils.findModuleDependencies(this.code),
+        (version, module) =>
+          !module.startsWith('.') && !reserved.includes(module)
+      );
     } catch (e) {
       // Likely a parse error
-      this._error(e);
+      this._error(`Couldn't find dependencies: ${e}`);
       this.isResolving = false;
       this._sendStateEvent();
       return null;
     }
 
     // Check if the dependencies already exist
-    if (!modules.length || isEqual(modules, Object.values(this.dependencies))) {
+    if (!Object.keys(modules).length || isEqual(modules, this.dependencies)) {
       this.isResolving = false;
       this._sendStateEvent();
       this._log(
@@ -750,20 +748,7 @@ export default class SnackSession {
     // This will trigger sending the 'START' message
     // TODO: what does this block do?
 
-    this.dependencies = modules.reduce(
-      (acc, curr) => ({
-        ...acc,
-        [curr.name]: {
-          name: this.dependencies[curr.name]
-            ? this.dependencies[curr.name].name
-            : null,
-          version: this.dependencies[curr.name]
-            ? this.dependencies[curr.name].version
-            : null,
-        },
-      }),
-      {}
-    );
+    this.dependencies = modules;
 
     this._sendStateEvent();
     this.loadingMessage = `Installing dependencies`;
@@ -774,8 +759,8 @@ export default class SnackSession {
       // This will also trigger bundling
       this._log(`Fetching dependencies: ${JSON.stringify(modules)}`);
       const results = await Promise.all(
-        modules.map(module =>
-          this._maybeFetchDependencyAsync(module.name, module.version)
+        Object.keys(modules).map(name =>
+          this._maybeFetchDependencyAsync(name, modules[name])
         )
       );
       this._log(`Got dependencies: ${JSON.stringify(results)}`);
@@ -813,12 +798,13 @@ export default class SnackSession {
       // Collect all dependency and peer dependency names and version
       const dependencies = {};
 
-      results.forEach(it => {
-        dependencies[it.name] = { name: it.name, version: it.version };
+      // do peerDeps first to make sure we prioritize the non-peerDeps versions
+      peerDependencies.forEach(it => {
+        dependencies[it.name] = it.version;
       });
 
-      peerDependencies.forEach(it => {
-        dependencies[it.name] = { name: it.name, version: it.version };
+      results.forEach(it => {
+        dependencies[it.name] = it.version;
       });
 
       if (
@@ -862,7 +848,7 @@ export default class SnackSession {
       return code;
     } catch (e) {
       // TODO: Show user that there is an error getting dependencies
-      this._error(e);
+      this._error(`Error in _findDependenciesOnceAsync: ${e}`);
     } finally {
       this.isResolving = false;
       this._sendStateEvent();

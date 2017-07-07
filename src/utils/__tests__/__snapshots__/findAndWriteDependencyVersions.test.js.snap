@@ -1,35 +1,17 @@
 exports[`test finds all imported modules 1`] = `
-Array [
-  Object {
-    "name": "base64",
-    "version": "1.2.3",
-  },
-  Object {
-    "name": "lodash/debounce",
-    "version": "2.3.4",
-  },
-  Object {
-    "name": "react-redux",
-    "version": null,
-  },
-]
+Object {
+  "base64": "1.2.3",
+  "lodash/debounce": "2.3.4",
+  "react-redux": null,
+}
 `;
 
 exports[`test finds all required modules 1`] = `
-Array [
-  Object {
-    "name": "base64",
-    "version": "1.2.3",
-  },
-  Object {
-    "name": "lodash/debounce",
-    "version": "2.3.4",
-  },
-  Object {
-    "name": "react-redux",
-    "version": null,
-  },
-]
+Object {
+  "base64": "1.2.3",
+  "lodash/debounce": "2.3.4",
+  "react-redux": null,
+}
 `;
 
 exports[`test writes versions for imported modules 1`] = `

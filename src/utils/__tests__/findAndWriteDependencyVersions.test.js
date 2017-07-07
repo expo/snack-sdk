@@ -1,6 +1,6 @@
 /* eslint-env jest */
 
-import moduleUtils from '../findModuleDependencies';
+import moduleUtils from '../findAndWriteDependencyVersions';
 
 it('finds all imported modules', () => {
   const code = `
@@ -34,14 +34,8 @@ it('writes versions for imported modules', () => {
   `;
 
   const modules = {
-    base64: {
-      name: 'base64',
-      version: '1.2.3',
-    },
-    'lodash/debounce': {
-      name: 'lodash/debounce',
-      version: '2.3.4',
-    },
+    base64: '1.2.3',
+    'lodash/debounce': '2.3.4',
   };
 
   const dependencies = moduleUtils.writeModuleVersions(code, modules);
@@ -57,14 +51,8 @@ it('writes versions for required modules', () => {
   `;
 
   const modules = {
-    base64: {
-      name: 'base64',
-      version: '1.2.3',
-    },
-    'lodash/debounce': {
-      name: 'lodash/debounce',
-      version: '2.3.4',
-    },
+    base64: '1.2.3',
+    'lodash/debounce': '2.3.4',
   };
 
   const dependencies = moduleUtils.writeModuleVersions(code, modules);
