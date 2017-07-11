@@ -272,15 +272,6 @@ export default class SnackSession {
     }
   };
 
-  // Support for older SDK versions that don't use diff
-  useDiffFormat = () => {
-    const oldSend = ['14.0.0', '15.0.0', '16.0.0', '18.0.0'];
-    if (oldSend.includes(this.sdkVersion)) {
-      return false;
-    }
-    return true;
-  };
-
   /**
    * Add a listener to get notified of error events.
    * @param {function(array)} callback - The callback that handles new error events. If there are no errors this will be called with an empty array. Otherwise will be called with an array of objects that each contain a `message` field.
@@ -470,6 +461,15 @@ export default class SnackSession {
     });
   };
 
+  // Support for older SDK versions that don't use diff
+  _useDiffFormat = () => {
+    const oldSend = ['14.0.0', '15.0.0', '16.0.0', '18.0.0'];
+    if (oldSend.includes(this.sdkVersion)) {
+      return false;
+    }
+    return true;
+  };
+
   //s3code: cache of code saved on s3
   //s3url: url to code stored on s3
   //diff: code diff sent to phone
@@ -482,7 +482,10 @@ export default class SnackSession {
         // if diff is too large upload new code to s3
         this.s3code = this.code;
         this.diff = '';
-        this.s3url = await sendFileUtils.uploadToS3(this.code);
+        this.s3url = await sendFileUtils.uploadToS3(
+          this.code,
+          this.apiSchemeAndHost
+        );
       }
     } else {
       this.diff = sendFileUtils.getFileDiff('', this.code);
@@ -491,7 +494,10 @@ export default class SnackSession {
         // Upload code to S3 because exceed max message size
         this.s3code = this.code;
         this.diff = '';
-        this.s3url = await sendFileUtils.uploadToS3(this.code);
+        this.s3url = await sendFileUtils.uploadToS3(
+          this.code,
+          this.apiSchemeAndHost
+        );
       }
     }
   };
@@ -698,14 +704,14 @@ export default class SnackSession {
 
       this._log(
         `Requesting dependency: ${this
-          .snackagerSchemeAndHost}/bundle/${name}${version ?
-          `@${version}` :
-          ''}?platforms=ios,android`
+          .snackagerSchemeAndHost}/bundle/${name}${version
+          ? `@${version}`
+          : ''}?platforms=ios,android`
       );
       const res = await fetch(
-        `${this.snackagerSchemeAndHost}/bundle/${name}${version ?
-          `@${version}` :
-          ''}?platforms=ios,android`
+        `${this.snackagerSchemeAndHost}/bundle/${name}${version
+          ? `@${version}`
+          : ''}?platforms=ios,android`
       );
 
       if (res.status === 200) {
