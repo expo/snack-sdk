@@ -16,7 +16,6 @@ const calcPayloadSize = (channel, manifest) => {
 };
 
 const uploadToS3 = async (code, api) => {
-  //TODO: change this to production
   const url = `${api}/--/api/v2/snack/uploadCode`;
   try {
     const response = await fetch(url, {

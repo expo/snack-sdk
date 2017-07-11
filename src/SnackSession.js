@@ -577,7 +577,7 @@ export default class SnackSession {
 
       const metadata = this._getAnalyticsMetadata();
       let message;
-      if (this.useDiffFormat()) {
+      if (this._useDiffFormat()) {
         await this._handleUploadCodeAsync();
         message = {
           type: 'CODE',

@@ -2,7 +2,7 @@
 
 import { defaultSDKVersion } from '../configs/sdkVersions';
 import fetchMock from 'fetch-mock';
-import testCode from '../test-files/bigfile';
+import testCode from '../../test-files/bigfile';
 
 jest.mock('pubnub');
 
