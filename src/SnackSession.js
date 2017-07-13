@@ -98,8 +98,9 @@ export default class SnackSession {
   dependencies: any; // TODO: more specific
   initialState: InitialState;
   isResolving: boolean;
-  apiSchemeAndHost: string;
-  snackagerSchemeAndHost: string;
+  expoApiUrl: string;
+  snackagerUrl: string;
+  snackagerCloudfrontUrl: string;
   loadingMessage: ?string;
 
   // Public API
@@ -113,8 +114,9 @@ export default class SnackSession {
     this.isVerbose = !!options.verbose;
     this.channel = options.sessionId || shortid.generate();
     this.host = options.host || 'snack.expo.io';
-    this.apiSchemeAndHost = 'https://expo.io';
-    this.snackagerSchemeAndHost = 'https://snackager.expo.io';
+    this.expoApiUrl = 'https://expo.io';
+    this.snackagerUrl = 'https://snackager.expo.io';
+    this.snackagerCloudfrontUrl = 'http://d37p21p3n8r8ug.cloudfront.net';
     this.snackId = options.snackId;
     this.name = options.name || DEFAULT_NAME;
     this.description = options.description || DEFAULT_DESCRIPTION;
@@ -332,7 +334,7 @@ export default class SnackSession {
    * @function
    */
   saveAsync = async () => {
-    const url = `${this.apiSchemeAndHost}/--/api/v2/snack/save`;
+    const url = `${this.expoApiUrl}/--/api/v2/snack/save`;
     const manifest: {
       sdkVersion: string,
       name: string,
@@ -490,7 +492,7 @@ export default class SnackSession {
         this.diff = '';
         this.s3url = await sendFileUtils.uploadToS3(
           this.code,
-          this.apiSchemeAndHost
+          this.expoApiUrl
         );
       }
     } else {
@@ -502,7 +504,7 @@ export default class SnackSession {
         this.diff = '';
         this.s3url = await sendFileUtils.uploadToS3(
           this.code,
-          this.apiSchemeAndHost
+          this.expoApiUrl
         );
       }
     }
@@ -708,16 +710,9 @@ export default class SnackSession {
 
       count++;
 
-      this._log(
-        `Requesting dependency: ${this
-          .snackagerSchemeAndHost}/bundle/${name}${version
-          ? `@${version}`
-          : ''}?platforms=ios,android`
-      );
+      this._log(`Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`);
       const res = await fetch(
-        `${this.snackagerSchemeAndHost}/bundle/${name}${version
-          ? `@${version}`
-          : ''}?platforms=ios,android`
+        `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
       );
 
       if (res.status === 200) {
@@ -747,17 +742,48 @@ export default class SnackSession {
           this._promises[id] = data;
           return data;
         })
-        .catch(e => {
-          // If an error occurs, delete the promise cache
-          this._promises[id] = {
-            name,
-            version: 'LATEST',
-            error: e.toString(),
-          };
-          this._error(`Error fetching dependency: ${e}`);
+        .catch(async e => {
+          if (
+            version &&
+            (await this._checkS3ForDepencencyAsync(name, version))
+          ) {
+            // Snackager returned an error but the dependency is uploaded
+            // to s3.
+            this._promises[id] = {
+              name,
+              version,
+            };
+          } else {
+            // If an error occurs, delete the promise cache
+            this._promises[id] = {
+              name,
+              version: 'LATEST',
+              error: e.toString(),
+            };
+            this._error(`Error fetching dependency: ${e}`);
+          }
           return this._promises[id];
         });
     return this._promises[id];
+  };
+
+  _checkS3ForDepencencyAsync = async (name: string, version: string) => {
+    const hash = (name + '@' + version).replace(/\//g, '~');
+    const promises = ['ios', 'android'].map(async platform => {
+      try {
+        let url = `${this.snackagerCloudfrontUrl}/${encodeURIComponent(
+          hash
+        )}-${platform}/.done`;
+
+        const res = await fetch(url);
+        return res.status < 400;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    let results = await Promise.all(promises);
+    return results.every(result => result);
   };
 
   _handleFindDependenciesAsync = async () => {
