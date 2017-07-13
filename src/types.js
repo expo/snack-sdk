@@ -29,6 +29,8 @@ export type ExpoPresenceListener = (event: ExpoPresenceEvent) => void;
 
 export type ExpoStateListener = (event: ExpoStateEvent) => void;
 
+export type ExpoDependencyErrorListener = (message: string) => void;
+
 export type ExpoErrorLocation = {
   line: number,
   column: number,

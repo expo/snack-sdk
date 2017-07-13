@@ -37,6 +37,7 @@ import type {
   ExpoDeviceLog,
   ExpoDevice,
   ExpoStateListener,
+  ExpoDependencyErrorListener,
 } from './types';
 
 import insertImport from './utils/insertImport';
@@ -92,6 +93,7 @@ export default class SnackSession {
   logListeners: Array<ExpoLogListener> = [];
   presenceListeners: Array<ExpoPresenceListener> = [];
   stateListeners: Array<ExpoStateListener> = [];
+  dependencyErrorListener: ExpoDependencyErrorListener;
   host: string;
   name: string;
   description: string;
@@ -490,10 +492,7 @@ export default class SnackSession {
         // if diff is too large upload new code to s3
         this.s3code = this.code;
         this.diff = '';
-        this.s3url = await sendFileUtils.uploadToS3(
-          this.code,
-          this.expoApiUrl
-        );
+        this.s3url = await sendFileUtils.uploadToS3(this.code, this.expoApiUrl);
       }
     } else {
       this.diff = sendFileUtils.getFileDiff('', this.code);
@@ -502,10 +501,7 @@ export default class SnackSession {
         // Upload code to S3 because exceed max message size
         this.s3code = this.code;
         this.diff = '';
-        this.s3url = await sendFileUtils.uploadToS3(
-          this.code,
-          this.expoApiUrl
-        );
+        this.s3url = await sendFileUtils.uploadToS3(this.code, this.expoApiUrl);
       }
     }
   };
@@ -743,24 +739,28 @@ export default class SnackSession {
           return data;
         })
         .catch(async e => {
+          this._error(`Error fetching dependency: ${e}`);
+
           if (
-            version &&
-            (await this._checkS3ForDepencencyAsync(name, version))
+            await this._checkS3ForDepencencyAsync(name, version || 'latest')
           ) {
             // Snackager returned an error but the dependency is uploaded
             // to s3.
             this._promises[id] = {
               name,
-              version,
-            };
-          } else {
-            // If an error occurs, delete the promise cache
-            this._promises[id] = {
-              name,
-              version: 'LATEST',
+              version: version || 'LATEST',
               error: e.toString(),
             };
-            this._error(`Error fetching dependency: ${e}`);
+          } else {
+            // Snackager returned an error and can't find on S3.
+            this._promises[id] = {
+              name,
+              version: 'ERROR. The Expo team has been notified.',
+            };
+
+            if (this.dependencyErrorListener) {
+              this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e}`);
+            }
           }
           return this._promises[id];
         });
