@@ -472,12 +472,14 @@ export default class SnackSession {
   };
 
   // Support for older SDK versions that don't use diff
+  // TODO: re-enable diff format for SDK 20
   _useDiffFormat = () => {
-    const oldSend = ['14.0.0', '15.0.0', '16.0.0', '18.0.0'];
+    /*const oldSend = ['14.0.0', '15.0.0', '16.0.0', '18.0.0'];
     if (oldSend.includes(this.sdkVersion)) {
       return false;
     }
-    return true;
+    return true;*/
+    return false;
   };
 
   //s3code: cache of code saved on s3
@@ -706,9 +708,15 @@ export default class SnackSession {
 
       count++;
 
-      this._log(`Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`);
+      this._log(
+        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version
+          ? `@${version}`
+          : ''}?platforms=ios,android`
+      );
       const res = await fetch(
-        `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
+        `${this.snackagerUrl}/bundle/${name}${version
+          ? `@${version}`
+          : ''}?platforms=ios,android`
       );
 
       if (res.status === 200) {
@@ -759,7 +767,9 @@ export default class SnackSession {
             };
 
             if (this.dependencyErrorListener) {
-              this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e}`);
+              this.dependencyErrorListener(
+                `Error fetching ${name}@${version || 'latest'}: ${e}`
+              );
             }
           }
           return this._promises[id];
