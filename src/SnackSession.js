@@ -118,7 +118,7 @@ export default class SnackSession {
     this.host = options.host || 'snack.expo.io';
     this.expoApiUrl = 'https://expo.io';
     this.snackagerUrl = 'https://snackager.expo.io';
-    this.snackagerCloudfrontUrl = 'http://d37p21p3n8r8ug.cloudfront.net';
+    this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
     this.snackId = options.snackId;
     this.name = options.name || DEFAULT_NAME;
     this.description = options.description || DEFAULT_DESCRIPTION;
