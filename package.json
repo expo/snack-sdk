@@ -1,6 +1,6 @@
 {
   "name": "snack-sdk",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "The Expo Snack SDK",
   "main": "build/snack.js",
   "files": [

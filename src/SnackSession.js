@@ -702,7 +702,7 @@ export default class SnackSession {
     let data;
 
     while (data ? data.pending : true) {
-      if (count > 10) {
+      if (count > 30) {
         throw new Error('Request timed out');
       }
 
@@ -723,7 +723,7 @@ export default class SnackSession {
         data = await res.json();
 
         if (data.pending) {
-          await new Promise(resolve => setTimeout(resolve, 10000));
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
       } else {
         const error = await res.text();
