@@ -84,8 +84,7 @@ const writeModuleVersions = (
         }
         const module = args[0].value;
         if (dependencies[module]) {
-          newCode[lineIndex] +=
-            ' // ' + dependencies[module] || 'error';
+          newCode[lineIndex] += ' // ' + dependencies[module] || 'error';
         }
       }
       this.traverse(path);
