@@ -7,6 +7,7 @@ export const versions = {
   '17.0.0': true,
   '18.0.0': true,
   '19.0.0': true,
+  '20.0.0': true,
 };
 
 export const defaultSDKVersion = '15.0.0';
