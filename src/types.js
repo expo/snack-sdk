@@ -14,6 +14,7 @@ export type ExpoSnackSessionArguments = {
   name?: string,
   description?: string,
   dependencies?: any, // TODO: more specific
+  authorizationToken?: string,
 };
 
 export type ExpoSubscription = {

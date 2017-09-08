@@ -103,6 +103,7 @@ export default class SnackSession {
   expoApiUrl: string;
   snackagerUrl: string;
   snackagerCloudfrontUrl: string;
+  authorizationToken: ?string;
   loadingMessage: ?string;
 
   // Public API
@@ -119,6 +120,7 @@ export default class SnackSession {
     this.expoApiUrl = 'https://expo.io';
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
+    this.authorizationToken = options.authorizationToken;
     this.snackId = options.snackId;
     this.name = options.name || DEFAULT_NAME;
     this.description = options.description || DEFAULT_DESCRIPTION;
@@ -276,6 +278,10 @@ export default class SnackSession {
     }
   };
 
+  setAuthorizationToken = (token: ?string): void => {
+    this.authorizationToken = token;
+  };
+
   /**
    * Add a listener to get notified of error events.
    * @param {function(array)} callback - The callback that handles new error events. If there are no errors this will be called with an empty array. Otherwise will be called with an array of objects that each contain a `message` field.
@@ -361,7 +367,12 @@ export default class SnackSession {
       const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.authorizationToken
+            ? { Authorization: `Bearer ${this.authorizationToken}` }
+            : {}),
+        },
       });
       const data = await response.json();
 
@@ -374,10 +385,16 @@ export default class SnackSession {
           dependencies: this.dependencies,
         };
         this._sendStateEvent();
+        let fullName;
+        if (data.id.match(/.*\/.*/)) {
+          fullName = data.id;
+        } else {
+          fullName = `@snack/${data.id}`;
+        }
 
         return {
           id: data.id,
-          url: `https://expo.io/@snack/${data.id}`,
+          url: `https://expo.io/${fullName}`,
         };
       } else {
         throw new Error(
