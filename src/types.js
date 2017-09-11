@@ -4,8 +4,23 @@
 
 import type { SDKVersion } from './configs/sdkVersions';
 
+// TODO: unify with snack model
+type requiredSnackFileAttributes = {
+  contents: string,
+  type: 'ASSET' | 'CODE',
+};
+
+type ExpoRequiredSnackFiles = {
+  'app.js': requiredSnackFileAttributes,
+};
+
+export type ExpoSnackFiles = {
+  ...$Exact<ExpoRequiredSnackFiles>,
+  ...{ [string]: requiredSnackFileAttributes },
+};
+
 export type ExpoSnackSessionArguments = {
-  code: string,
+  files: ExpoSnackFiles,
   sdkVersion?: SDKVersion,
   verbose?: boolean,
   sessionId?: string, // Will be randomly generated if not provided
@@ -84,7 +99,7 @@ export type ExpoPresenceEvent = {
 };
 
 export type ExpoStateEvent = {
-  code: string,
+  files: ExpoSnackFiles,
   sdkVersion: SDKVersion,
   name: string,
   description: string,
