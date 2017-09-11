@@ -15,7 +15,7 @@ const calcPayloadSize = (channel, manifest) => {
   return encodeURIComponent(channel + JSON.stringify(manifest)).length + 100;
 };
 
-const uploadToS3 = async (code, api) => {
+const uploadCodeToS3 = async (code, api) => {
   const url = `${api}/--/api/v2/snack/uploadCode`;
   try {
     const response = await fetch(url, {
@@ -26,8 +26,29 @@ const uploadToS3 = async (code, api) => {
     const data = await response.json();
     return data.url;
   } catch (e) {
-    throw e;
+    throw new Error('Unable to upload code to S3: ' + e);
   }
 };
 
-export default { getFileDiff, calcPayloadSize, uploadToS3 };
+const uploadAssetToS3 = async (asset, api) => {
+  const url = `${api}/--/api/v2/snack/uploadAsset`;
+  const FD = new FormData();
+  FD.append('asset', asset, asset.name);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      body: FD,
+    });
+    const data = await response.json();
+    return data.url;
+  } catch (e) {
+    throw new Error('Unable to upload asset to S3: ' + e);
+  }
+};
+
+export default {
+  getFileDiff,
+  calcPayloadSize,
+  uploadCodeToS3,
+  uploadAssetToS3,
+};
