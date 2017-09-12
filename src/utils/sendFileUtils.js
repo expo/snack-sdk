@@ -1,6 +1,8 @@
+/* flow */
+
 var diff = require('diff');
 
-const getFileDiff = (oldCode, newCode) => {
+const getFileDiff = (oldCode: string, newCode: string) => {
   const patch = diff.createPatch('code', oldCode, newCode, '', '', {
     context: 0,
   });
@@ -15,7 +17,7 @@ const calcPayloadSize = (channel, manifest) => {
   return encodeURIComponent(channel + JSON.stringify(manifest)).length + 100;
 };
 
-const uploadCodeToS3 = async (code, api) => {
+const uploadCodeToS3 = async (code: string, api: string) => {
   const url = `${api}/--/api/v2/snack/uploadCode`;
   try {
     const response = await fetch(url, {
@@ -30,7 +32,7 @@ const uploadCodeToS3 = async (code, api) => {
   }
 };
 
-const uploadAssetToS3 = async (asset, api) => {
+const uploadAssetToS3 = async (asset: string, api: string) => {
   const url = `${api}/--/api/v2/snack/uploadAsset`;
   const FD = new FormData();
   FD.append('asset', asset, asset.name);
