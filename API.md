@@ -9,7 +9,7 @@ Creates a snack session on the web. Multiple mobile devices can connect to the s
 **Parameters**
 
 -   `options` **[object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** 
-    -   `options.code` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The initial React Native code.
+    -   `options.files` **ExpoSnackFiles** The initial React Native code.
     -   `options.name` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)?** Name shown if this Snack is saved.
     -   `options.description` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)?** Descriptions shown if this Snack is saved.
     -   `options.sessionId` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)?** Can be specified if you want a consistent url. This is a global namespace so make sure to use a UUID or scope it somehow if you use this.
@@ -34,13 +34,19 @@ Returns a url that will open the current Snack session in the Expo client when o
 
 Returns **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;void>** A promise that contains the url when fulfilled.
 
+### uploadAssetAsync
+
+Upload an asset file that will be available in each connected mobile client
+
+Returns **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)>** A promise that contains the url when fulfilled
+
 ### sendCodeAsync
 
 Push new code to each connected mobile client. Any clients that connect in the future will also get the new code.
 
 **Parameters**
 
--   `code` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The new React Native code.
+-   `files` **ExpoSnackFiles** The new React Native code.
 
 Returns **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;void>** A promise that resolves when the code has been sent. Does not wait for the mobile clients to update before resolving.
 

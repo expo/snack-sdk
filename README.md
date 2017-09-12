@@ -12,7 +12,7 @@ The Expo Snack SDK. Use this to create a custom web interface for https://snack.
 import { SnackSession } from 'snack-sdk';
 
 let session = new SnackSession({
-  code: String,
+  files?: ExpoSnackFiles,
   sdkVersion?: SDKVersion,
   sessionId?: string,
   verbose?: boolean,
@@ -21,9 +21,11 @@ let session = new SnackSession({
 await session.startAsync();
 ```
 
-`code` is the initial React Native code.
+`code` is the initial React Native code for a single file snack
 
-`sdkVersion` determines what version of React Native is used on the mobile client. Defaults to `15.0.0` which maps to React Native 0.42.0. If you specify a different version, make sure to save that version along with the code. Code from one SDK version is not guaranteed to work on others.
+`files` is a map of all of the files included in the project.  The filenames should be the full path from the project root. 
+
+`sdkVersion` determines what version of React Native is used on the mobile client. Defaults to `15.0.0` which maps to React Native 0.42.0. If you specify a different version, make sure to save that version along with the code. Code from one SDK version is not guaranteed to work on others. To use multiple files, you must use SDK 20 or above.
 
 `sessionId` can be specified if you want a consistent url. This is a global namespace so make sure to use a UUID or scope it somehow if you use this.
 
@@ -35,9 +37,35 @@ This url will open the current Snack Session in the Expo client when opened on a
 
 ### Updating the code
 ```javascript
-await session.sendCodeAsync(code: String);
+const files = { 
+	'app.js': { contents: 'code here, this is entry point', type: 'FILE'},
+	'folder/file.js': { contents: 'this file is in /folder', type: 'FILE'},
+	'image.png': { content: 'remote location of asset', type: 'ASSET'},
+}
+await session.sendCodeAsync(files: Object);
 ```
+
 This will push the new code to each connected mobile client. Any new clients that connect will also get the new code.
+
+For SDK 20 and above, you can have multiple files in a Snack. This includes support for folders and relative path imports. See the example above on sending data. The entry point for running a Snack is `app.js`.
+
+You'll also be able to send Assets (images, fonts, etc.). To do this include the asset in the files object, with key being file name and value being the remote location where this asset is stored.
+
+### Uploading assets
+```javascript
+const remoteAddressOfAssetFile = await session.uploadAssetAsync(file);
+```
+where file is a Javascript `File` object.
+
+### Arbitary NPM Modules
+
+In Snack SDK 20 and above, you'll be able to use arbitary NPM modules with your app. Simply `import` or `require` them just like you will on desktop and we'll handle the rest (installing the modules and bundling it with project).
+
+Example:
+
+```
+import lodash from 'lodash';
+```
 
 ### Saving the code to Expo's servers
 ```javascript
@@ -47,6 +75,18 @@ console.log(saveResult);
 // This will print: `{"id":"abc123","url":"https://expo.io/@snack/abc123"}`
 ```
 This will upload the current code to Expo's servers and return a url that points to that version of the code.
+
+
+### Downloading Code
+
+```javascript
+const downloadURL = await session.downloadAsync();
+
+console.log(downloadURL);
+// This will print: { url: "https://expo.io/--/api/v2/snack/download/snackIDHere" }
+```
+
+This will return a link to our server with a `.zip` of your Snack project. You'll be able to run this exported project using `exp` or XDE.
 
 ### Listening for events
 Here are the Flow types for the error, log, and presence listeners:
