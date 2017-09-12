@@ -11,6 +11,7 @@ import debounce from 'lodash/debounce';
 import pull from 'lodash/pull';
 import isEqual from 'lodash/isEqual';
 import pickBy from 'lodash/pickBy';
+import cloneDeep from 'lodash/cloneDeep';
 import difference from 'lodash/difference';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
@@ -18,13 +19,14 @@ import semver from 'semver';
 
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
-import { defaultSDKVersion } from './configs/sdkVersions';
+import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
 
 let platform = null;
 
 // eslint-disable-next-line no-duplicate-imports
-import type { SDKVersion } from './configs/sdkVersions';
+import type { SDKVersion, Feature } from './configs/sdkVersions';
 import type {
+  ExpoSnackFiles,
   ExpoSnackSessionArguments,
   ExpoSubscription,
   ExpoErrorListener,
@@ -45,7 +47,7 @@ import moduleUtils from './utils/findAndWriteDependencyVersions';
 import config from './configs/babylon';
 
 type InitialState = {
-  code: string,
+  files: ExpoSnackFiles,
   name: string,
   description: string,
   dependencies: { [key: string]: string },
@@ -66,11 +68,12 @@ const DEBOUNCE_INTERVAL = 500;
 const DEFAULT_NAME = 'Unnamed Snack';
 const DEFAULT_DESCRIPTION = 'No description';
 const MAX_PUBNUB_SIZE = 31500;
+const S3_BUCKET_URL = 'https://snack-code-uploads';
 
 /**
  * Creates a snack session on the web. Multiple mobile devices can connect to the same session and each one will be updated when new code is pushed.
  * @param {object} options
- * @param {string} options.code The initial React Native code.
+ * @param {ExpoSnackFiles} options.files The initial React Native code.
  * @param {string} [options.name] Name shown if this Snack is saved.
  * @param {string} [options.description] Descriptions shown if this Snack is saved.
  * @param {string} [options.sessionId] Can be specified if you want a consistent url. This is a global namespace so make sure to use a UUID or scope it somehow if you use this.
@@ -79,10 +82,10 @@ const MAX_PUBNUB_SIZE = 31500;
  */
 // host and snackId are not included in the docs since they are only used internally.
 export default class SnackSession {
-  code: string;
-  s3code: ?string;
-  diff: ?string;
-  s3url: ?string;
+  files: ExpoSnackFiles;
+  s3code: { [key: string]: string };
+  diff: { [key: string]: string };
+  s3url: { [key: string]: string };
   snackId: ?string;
   sdkVersion: SDKVersion;
   isVerbose: boolean;
@@ -110,14 +113,17 @@ export default class SnackSession {
   constructor(options: ExpoSnackSessionArguments) {
     // TODO: check to make sure code was passed in
 
-    this.isResolving = false; // TODO: important?
+    this.isResolving = false;
 
-    this.code = options.code;
+    this.files = options.files;
+    this.diff = {};
+    this.s3url = {};
+    this.s3code = {};
     this.sdkVersion = options.sdkVersion || defaultSDKVersion;
     this.isVerbose = !!options.verbose;
     this.channel = options.sessionId || shortid.generate();
     this.host = options.host || 'snack.expo.io';
-    this.expoApiUrl = 'https://expo.io';
+    this.expoApiUrl = 'http://expo.dev'; // TODO: change to 'https://expo.io' before releasing
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
     this.authorizationToken = options.authorizationToken;
@@ -125,19 +131,19 @@ export default class SnackSession {
     this.name = options.name || DEFAULT_NAME;
     this.description = options.description || DEFAULT_DESCRIPTION;
     this.dependencies = options.dependencies || {};
-    this.initialState = {
-      code: this.code,
+    this.initialState = cloneDeep({
+      files: options.files,
       name: this.name,
       description: this.description,
       dependencies: this.dependencies,
       sdkVersion: this.sdkVersion,
-    };
+    });
 
     if (this.channel.length < MIN_CHANNEL_LENGTH) {
       throw new Error('Please use a channel id with more entropy');
     }
 
-    if (this._shouldUseThirdPartyModules()) {
+    if (this.supportsFeature('ARBITRARY_IMPORTS')) {
       // TODO: do we actually need this here?
       this._handleFindDependenciesAsync();
     }
@@ -217,7 +223,7 @@ export default class SnackSession {
    * @function
    */
   stopAsync = async (): Promise<void> => {
-    this.s3url = null;
+    this.s3url = {};
     this._unsubscribe();
   };
 
@@ -238,21 +244,51 @@ export default class SnackSession {
   };
 
   /**
+   * Upload an asset file that will be available in each connected mobile client
+   *
+   * @param {Promise.<https://developer.mozilla.org/en-US/docs/Web/API/File>}
+   * @returns {Promise.<string>} A promise that contains the url when fulfilled
+   * @function
+  */
+  uploadAssetAsync = async (content: Object): Promise<string> => {
+    return sendFileUtils.uploadAssetToS3(content, this.expoApiUrl);
+  };
+
+  /**
    * Push new code to each connected mobile client. Any clients that connect in the future will also get the new code.
-   * @param {string} code The new React Native code.
+   * @param {ExpoSnackFiles} files The new React Native code.
    * @returns {Promise.<void>} A promise that resolves when the code has been sent. Does not wait for the mobile clients to update before resolving.
    * @function
    */
 
-  sendCodeAsync = async (code: string): Promise<void> => {
-    if (this.code !== code) {
-      this.code = code;
-      // TODO: figure out how to route errors from _publishNotDebouncedAsync back here.
-      this._publish();
-      this._sendStateEvent();
+  // TODO: parallelize
+  sendCodeAsync = async (files: ExpoSnackFiles): Promise<void> => {
+    for (const key in files) {
+      if (!this.files[key] || this.files[key] !== files[key]) {
+        this.files[key] = files[key];
+        if (
+          this.files[key].type === 'ASSET' &&
+          typeof this.files[key].contents === 'object'
+        ) {
+          this.files[key].contents = await sendFileUtils.uploadAssetToS3(
+            this.files[key].contents,
+            this.expoApiUrl
+          );
+        }
+      }
     }
+    this._publish();
+    this._sendStateEvent();
   };
 
+  downloadAsync = async () => {
+    const url = `${this.expoApiUrl}/--/api/v2/snack/download`;
+    const save = await this.saveAsync();
+    const id = save.id;
+    return { url: url + '/' + id };
+  };
+
+  // TODO: error when changing SDK to an unsupported version
   setSdkVersion = (sdkVersion: SDKVersion): void => {
     if (this.sdkVersion !== sdkVersion) {
       this.sdkVersion = sdkVersion;
@@ -341,6 +377,7 @@ export default class SnackSession {
    * @returns {Promise.<object>} A promise that contains an object with a `url` field when fulfilled.
    * @function
    */
+
   saveAsync = async () => {
     const url = `${this.expoApiUrl}/--/api/v2/snack/save`;
     const manifest: {
@@ -354,13 +391,13 @@ export default class SnackSession {
       description: this.description,
     };
 
-    if (this._shouldUseThirdPartyModules()) {
+    if (this.supportsFeature('ARBITRARY_IMPORTS')) {
       manifest.dependencies = this.dependencies;
     }
 
     const payload = {
       manifest,
-      code: this.code,
+      code: this.files,
     };
 
     try {
@@ -377,13 +414,13 @@ export default class SnackSession {
       const data = await response.json();
 
       if (data.id) {
-        this.initialState = {
+        this.initialState = cloneDeep({
           sdkVersion: this.sdkVersion,
-          code: this.code,
+          files: this.files,
           name: this.name,
           description: this.description,
           dependencies: this.dependencies,
-        };
+        });
         this._sendStateEvent();
         let fullName;
         if (data.id.match(/.*\/.*/)) {
@@ -410,7 +447,7 @@ export default class SnackSession {
 
   getState = () => {
     return {
-      code: this.code,
+      files: this.files,
       sdkVersion: this.sdkVersion,
       name: this.name,
       description: this.description,
@@ -424,13 +461,11 @@ export default class SnackSession {
     return this.channel;
   };
 
-  // Private methods
-
-  _shouldUseThirdPartyModules = (): boolean => {
-    return (
-      this.sdkVersion === '17.0.0' || semver.gte(this.sdkVersion, '19.0.0')
-    );
+  supportsFeature = (feature: Feature) => {
+    return sdkSupportsFeature(this.sdkVersion, feature);
   };
+
+  // Private methods
 
   _sendErrorEvent = (errors: Array<ExpoError>): void => {
     this.errorListeners.forEach(listener => listener(errors));
@@ -454,7 +489,7 @@ export default class SnackSession {
 
   _isSaved = (): boolean => {
     const {
-      code,
+      files,
       name,
       description,
       dependencies,
@@ -463,7 +498,7 @@ export default class SnackSession {
     } = this;
 
     return isEqual(initialState, {
-      code,
+      files,
       name,
       description,
       dependencies,
@@ -488,41 +523,73 @@ export default class SnackSession {
     });
   };
 
-  // Support for older SDK versions that don't use diff
-  // TODO: re-enable diff format for SDK 20
-  _useDiffFormat = () => {
-    /*const oldSend = ['14.0.0', '15.0.0', '16.0.0', '18.0.0'];
-    if (oldSend.includes(this.sdkVersion)) {
-      return false;
-    }
-    return true;*/
-    return false;
-  };
-
   //s3code: cache of code saved on s3
   //s3url: url to code stored on s3
   //diff: code diff sent to phone
   _handleUploadCodeAsync = async () => {
-    if (this.s3url) {
-      // send diff against what is stored on s3
-      this.diff = sendFileUtils.getFileDiff(this.s3code, this.code);
-      const size = sendFileUtils.calcPayloadSize(this.channel, this.diff);
-      if (size > MAX_PUBNUB_SIZE) {
-        // if diff is too large upload new code to s3
-        this.s3code = this.code;
-        this.diff = '';
-        this.s3url = await sendFileUtils.uploadToS3(this.code, this.expoApiUrl);
-      }
-    } else {
-      this.diff = sendFileUtils.getFileDiff('', this.code);
-      const size = sendFileUtils.calcPayloadSize(this.channel, this.diff);
-      if (size > MAX_PUBNUB_SIZE) {
-        // Upload code to S3 because exceed max message size
-        this.s3code = this.code;
-        this.diff = '';
-        this.s3url = await sendFileUtils.uploadToS3(this.code, this.expoApiUrl);
+    const fileSize = [];
+    await this._uploadHelper(fileSize);
+
+    let size = sendFileUtils.calcPayloadSize(this.channel, {
+      diff: this.diff,
+      s3url: this.s3url,
+    });
+
+    //TODO: make this async
+    // If payload size is too big, upload code to s3 (starting from largest file)
+    if (size > MAX_PUBNUB_SIZE) {
+      fileSize.sort((a, b) => a.size - b.size);
+      while (size > MAX_PUBNUB_SIZE && fileSize.length) {
+        const key = fileSize.pop().name;
+        this.s3code[key] = this.files[key].contents;
+        this.diff[key] = '';
+        this.s3url[key] = await sendFileUtils.uploadCodeToS3(
+          this.files[key].contents,
+          this.expoApiUrl
+        );
+        size = sendFileUtils.calcPayloadSize(this.channel, {
+          diff: this.diff,
+          s3url: this.s3url,
+        });
       }
     }
+  };
+
+  // Turn files into diff, s3url, and s3code
+  _uploadHelper = async (fileSize: Array<Object>) => {
+    await Promise.all(
+      Object.keys(this.files).map(async key => {
+        if (!this.files[key]) {
+          return;
+        } else if (typeof this.files[key].contents === 'object') {
+          // Upload Asset to S3
+          this.s3code[key] = this.files[key].contents;
+          this.diff[key] = '';
+          this.s3url[key] = await sendFileUtils.uploadAssetToS3(
+            this.files[key].contents,
+            this.expoApiUrl
+          );
+        } else if (this.files[key].contents.startsWith(S3_BUCKET_URL)) {
+          // Asset is already uploaded
+          this.diff[key] = '';
+          this.s3code[key] = this.files[key].contents;
+          this.s3url[key] = this.files[key].contents;
+        } else if (this.s3url[key]) {
+          // Send diff against code on s3
+          this.diff[key] = sendFileUtils.getFileDiff(
+            this.s3code[key],
+            this.files[key].contents
+          );
+        } else {
+          // Send all of the code in diff (file small enough not to be uploaded)
+          this.diff[key] = sendFileUtils.getFileDiff(
+            '',
+            this.files[key].contents
+          );
+        }
+        fileSize.push({ name: key, size: this.diff[key].length });
+      })
+    );
   };
 
   _handleLogMessage = (pubnubEvent: ExpoPubnubDeviceLog) => {
@@ -589,7 +656,7 @@ export default class SnackSession {
     if (this.loadingMessage) {
       this._sendLoadingEvent();
     } else {
-      if (this._shouldUseThirdPartyModules()) {
+      if (this.supportsFeature('ARBITRARY_IMPORTS')) {
         await this._handleFindDependenciesAsync();
       }
 
@@ -600,7 +667,7 @@ export default class SnackSession {
 
       const metadata = this._getAnalyticsMetadata();
       let message;
-      if (this._useDiffFormat()) {
+      if (this.supportsFeature('MULTIPLE_FILES')) {
         await this._handleUploadCodeAsync();
         message = {
           type: 'CODE',
@@ -611,10 +678,11 @@ export default class SnackSession {
       } else {
         message = {
           type: 'CODE',
-          code: this.code,
+          code: this.files['app.js'].contents,
           metadata,
         };
       }
+
       this.pubnub.publish(
         { channel: this.channel, message },
         (status, response) => {
@@ -634,6 +702,9 @@ export default class SnackSession {
     }
 
     const payload = { type: 'LOADING_MESSAGE', message: this.loadingMessage };
+    if (!this.pubnub) {
+      return;
+    }
     this.pubnub.publish(
       { channel: this.channel, message: payload },
       (status, response) => {
@@ -814,37 +885,49 @@ export default class SnackSession {
   };
 
   _handleFindDependenciesAsync = async () => {
-    if (!this._shouldUseThirdPartyModules()) {
+    if (!this.supportsFeature('ARBITRARY_IMPORTS')) {
       return;
     }
 
-    // loop until we've found dependencies for the current version of the code
-    while (true) {
-      let codeAtStartOfFindDependencies = this.code;
-      let codeWithVersions = await this._findDependenciesOnceAsync();
-      if (this.code === codeAtStartOfFindDependencies) {
-        // can be null if no changes need to be made
-        if (codeWithVersions) {
-          this.code = codeWithVersions;
-          this._sendStateEvent();
-        }
+    const files = this.files;
 
-        this.loadingMessage = null;
+    if (this.isResolving) {
+      return;
+    }
 
-        return;
-      }
+    this.isResolving = true;
+
+    try {
+      await Promise.all(
+        Object.keys(files).map(async key => {
+          if (key.endsWith('.js')) {
+            const codeAtStartOfFindDependencies = files[key].contents;
+            const codeWithVersions = await this._findDependenciesOnceAsync(
+              files[key].contents
+            );
+            if (files[key].contents === codeAtStartOfFindDependencies) {
+              // can be null if no changes need to be made
+              if (codeWithVersions) {
+                files[key].contents = codeWithVersions;
+                this._sendStateEvent();
+              }
+            }
+          }
+        })
+      );
+    } catch (e) {
+      console.error(e);
+    } finally {
+      this.loadingMessage = null;
+      this.isResolving = false;
+      this._sendStateEvent();
     }
   };
 
-  _findDependenciesOnceAsync = async (): Promise<?string> => {
-    if (!this._shouldUseThirdPartyModules()) {
+  _findDependenciesOnceAsync = async (file: string): Promise<?string> => {
+    if (!this.supportsFeature('ARBITRARY_IMPORTS')) {
       return null;
     }
-
-    if (this.isResolving) {
-      return null;
-    }
-    this.isResolving = true;
 
     const reserved = ['react', 'react-native', 'expo'];
 
@@ -853,33 +936,26 @@ export default class SnackSession {
       // Find all module imports in the code
       // This will skip local imports and reserved ones
       modules = pickBy(
-        moduleUtils.findModuleDependencies(this.code),
+        moduleUtils.findModuleDependencies(file),
         (version, module) =>
           !module.startsWith('.') && !reserved.includes(module)
       );
     } catch (e) {
       // Likely a parse error
       this._error(`Couldn't find dependencies: ${e}`);
-      this.isResolving = false;
-      this._sendStateEvent();
       return null;
     }
 
     // Check if the dependencies already exist
-    if (!Object.keys(modules).length || isEqual(modules, this.dependencies)) {
-      this.isResolving = false;
-      this._sendStateEvent();
+    const noNewDep =
+      difference(Object.keys(modules), Object.keys(this.dependencies))
+        .length === 0;
+    if (!Object.keys(modules).length || noNewDep) {
       this._log(
         `All dependencies are already loaded: ${JSON.stringify(modules)}`
       );
       return null;
     }
-
-    // Set dependencies to what we found
-    // This will trigger sending the 'START' message
-    // TODO: what does this block do?
-
-    this.dependencies = modules;
 
     this._sendStateEvent();
     this.loadingMessage = `Installing dependencies`;
@@ -938,20 +1014,7 @@ export default class SnackSession {
         dependencies[it.name] = it.version;
       });
 
-      if (
-        difference(Object.keys(dependencies), Object.keys(this.dependencies))
-          .length
-      ) {
-        // There are new dependencies from what we installed
-        this._log(
-          `There are new dependencies from what we installed. Current dependencies: ${JSON.stringify(
-            dependencies
-          )}. Dependencies in state: ${JSON.stringify(this.dependencies)}.`
-        );
-        return null;
-      }
-
-      let code = this.code;
+      let code = file;
 
       // We need to insert peer dependencies in code when found
       if (peerDependencies.length) {
@@ -976,8 +1039,8 @@ export default class SnackSession {
       this._log('Writing module versions');
       code = moduleUtils.writeModuleVersions(code, dependencies);
 
-      this.dependencies = dependencies;
-      this.isResolving = false;
+      // TODO: this system will not remove old dependencies that are no longer needed!
+      Object.assign(this.dependencies, dependencies);
       this._sendStateEvent();
 
       return code;
@@ -985,7 +1048,6 @@ export default class SnackSession {
       // TODO: Show user that there is an error getting dependencies
       this._error(`Error in _findDependenciesOnceAsync: ${e}`);
     } finally {
-      this.isResolving = false;
       this._sendStateEvent();
     }
   };
