@@ -123,7 +123,7 @@ export default class SnackSession {
     this.isVerbose = !!options.verbose;
     this.channel = options.sessionId || shortid.generate();
     this.host = options.host || 'snack.expo.io';
-    this.expoApiUrl = 'http://expo.dev'; // TODO: change to 'https://expo.io' before releasing
+    this.expoApiUrl = 'https://expo.io'; //'http://expo.dev'; // TODO: change to 'https://expo.io' before releasing
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
     this.authorizationToken = options.authorizationToken;
