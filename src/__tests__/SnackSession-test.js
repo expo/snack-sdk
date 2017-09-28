@@ -8,8 +8,11 @@ jest.mock('pubnub');
 
 const SnackSession = require('../SnackSession').default;
 
-const INITIAL_CODE = 'code';
-const NEW_CODE = 'new code!';
+const INITIAL_CODE = { 'app.js': { contents: 'code', type: 'CODE' } };
+const NEW_CODE = 'New Code!';
+const NEW_CODE_MF_STYLE = {
+  'app.js': { contents: 'New Code!', type: 'CODE' },
+};
 const NEW_CODE_DIFF =
   'Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -1,0 +1,1 @@\n\\ No newline at end of file\n+new code!\n';
 const NEW_CODE_2 = 'new code 2!';
@@ -40,7 +43,7 @@ const ERROR_MESSAGE = {
 
 async function startDefaultSessionAsync(args = {}) {
   let session = new SnackSession({
-    code: INITIAL_CODE,
+    files: INITIAL_CODE,
     sessionId: SESSION_ID,
     ...args,
   });
@@ -148,7 +151,7 @@ describe('sendCodeAsync', () => {
   it('sends the correct message to the device', async () => {
     startMockingDate();
     let session = await startDefaultSessionAsync();
-    await session.sendCodeAsync(NEW_CODE);
+    await session.sendCodeAsync(NEW_CODE_MF_STYLE);
     setMockDate(1000);
     stopMockingDate();
     expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
@@ -293,7 +296,7 @@ describe('sendCodeAsync', () => {
     let session = await startDefaultSessionAsync({
       verbose: true,
     });
-    await session.sendCodeAsync(NEW_CODE);
+    await session.sendCodeAsync(NEW_CODE_MF_STYLE);
     setMockDate(1000);
     stopMockingDate();
     let _originalConsoleLog = console.log;
@@ -317,7 +320,7 @@ describe('sendCodeAsync', () => {
     let session = await startDefaultSessionAsync({
       verbose: true,
     });
-    await session.sendCodeAsync(NEW_CODE);
+    await session.sendCodeAsync(NEW_CODE_MF_STYLE);
     setMockDate(1000);
     stopMockingDate();
     let _originalConsoleError = console.error;
@@ -400,8 +403,9 @@ describe('saveAsync', () => {
     expect(lastCall[0]).toEqual('https://expo.io/--/api/v2/snack/save');
     expect(lastCall[1]).toEqual({
       method: 'POST',
-      body:
-        '{"manifest":{"sdkVersion":"15.0.0","name":"Unnamed Snack","description":"No description"},"code":"code"}',
+      body: `{"manifest":{"sdkVersion":"15.0.0","name":"Unnamed Snack","description":"No description"},"code":${JSON.stringify(
+        INITIAL_CODE
+      )}}`,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -427,8 +431,9 @@ describe('saveAsync', () => {
     expect(lastCall[0]).toEqual('https://expo.io/--/api/v2/snack/save');
     expect(lastCall[1]).toEqual({
       method: 'POST',
-      body:
-        '{"manifest":{"sdkVersion":"15.0.0","name":"testname1","description":"testdescription1"},"code":"code"}',
+      body: `{"manifest":{"sdkVersion":"15.0.0","name":"testname1","description":"testdescription1"},"code":${JSON.stringify(
+        INITIAL_CODE
+      )}}`,
       headers: {
         'Content-Type': 'application/json',
       },
