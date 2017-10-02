@@ -263,6 +263,13 @@ export default class SnackSession {
 
   // TODO: parallelize
   sendCodeAsync = async (files: ExpoSnackFiles): Promise<void> => {
+    // remove files that are no longer present in the code
+    for (const key in this.files) {
+      if (!files.hasOwnProperty(key)) {
+        delete this.files[key];
+      }
+    }
+    // and add or update the files in the provided code
     for (const key in files) {
       if (!this.files[key] || this.files[key] !== files[key]) {
         this.files[key] = files[key];

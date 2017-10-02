@@ -21,11 +21,9 @@ let session = new SnackSession({
 await session.startAsync();
 ```
 
-`code` is the initial React Native code for a single file snack
-
 `files` is a map of all of the files included in the project.  The filenames should be the full path from the project root. 
 
-`sdkVersion` determines what version of React Native is used on the mobile client. Defaults to `15.0.0` which maps to React Native 0.42.0. If you specify a different version, make sure to save that version along with the code. Code from one SDK version is not guaranteed to work on others. To use multiple files, you must use SDK 20 or above.
+`sdkVersion` determines what version of React Native is used on the mobile client. Defaults to `15.0.0` which maps to React Native 0.42.0. If you specify a different version, make sure to save that version along with the code. Code from one SDK version is not guaranteed to work on others. To use multiple files, you must use SDK 21 or above.
 
 `sessionId` can be specified if you want a consistent url. This is a global namespace so make sure to use a UUID or scope it somehow if you use this.
 
@@ -38,8 +36,8 @@ This url will open the current Snack Session in the Expo client when opened on a
 ### Updating the code
 ```javascript
 const files = { 
-	'app.js': { contents: 'code here, this is entry point', type: 'FILE'},
-	'folder/file.js': { contents: 'this file is in /folder', type: 'FILE'},
+	'app.js': { contents: 'code here, this is entry point', type: 'CODE'},
+	'folder/file.js': { contents: 'this file is in /folder', type: 'CODE'},
 	'image.png': { content: 'remote location of asset', type: 'ASSET'},
 }
 await session.sendCodeAsync(files: Object);
@@ -47,7 +45,7 @@ await session.sendCodeAsync(files: Object);
 
 This will push the new code to each connected mobile client. Any new clients that connect will also get the new code.
 
-For SDK 20 and above, you can have multiple files in a Snack. This includes support for folders and relative path imports. See the example above on sending data. The entry point for running a Snack is `app.js`.
+For SDK 21 and above, you can have multiple files in a Snack. This includes support for folders and relative path imports. See the example above on sending data. The entry point for running a Snack is `app.js`, which is required to be included in any project provided to the SnackSession constructor or sendCodeAsync calls.
 
 You'll also be able to send Assets (images, fonts, etc.). To do this include the asset in the files object, with key being file name and value being the remote location where this asset is stored.
 
@@ -59,7 +57,9 @@ where file is a Javascript `File` object.
 
 ### Arbitary NPM Modules
 
-In Snack SDK 20 and above, you'll be able to use arbitary NPM modules with your app. Simply `import` or `require` them just like you will on desktop and we'll handle the rest (installing the modules and bundling it with project).
+When using Expo SDK 19 and above, you'll be able to use arbitary NPM modules with your app. Simply `import` or `require` them just like you will on desktop and we'll handle the rest (installing the modules and bundling it with project).
+
+SnackSession will append a comment to each line inticating the version that will be used, or an error message if the requested import could not be found.  You are encouraged to make this information available to your users in the interface.
 
 Example:
 
