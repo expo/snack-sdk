@@ -3,14 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "qrcode.react": "^0.6.1",
-    "react": "^15.4.2",
-    "react-dom": "^15.4.2",
-    "snack-sdk": "^0.0.8"
+    "qrcode.react": "^0.7.2",
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0",
+    "react-scripts": "^1.0.14",
+    "snack-sdk": "^1.0.0"
   },
-  "devDependencies": {
-    "react-scripts": "0.9.5"
-  },
+  "devDependencies": {},
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
