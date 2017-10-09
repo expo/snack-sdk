@@ -151,12 +151,12 @@ class App extends Component {
           </pre>
         </div>
         <div>
-          <a href="#" onClick={this._removeListeners}>
+          <a href="#removeListeners" onClick={this._removeListeners}>
             Remove Listeners
           </a>
         </div>
         <div>
-          <a href="#" onClick={this._save}>
+          <a href="#save" onClick={this._save}>
             Save
           </a>
         </div>
