@@ -125,7 +125,6 @@ class App extends Component {
   }
 
   _onChangeCode = async (event, fileName) => {
-    console.log(event);
     const code = event.target.value;
     this.setState({
       files: {
