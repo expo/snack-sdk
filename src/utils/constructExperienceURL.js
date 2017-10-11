@@ -18,6 +18,8 @@ export default function constructExperienceURL({
   let hostWithoutSubdomain;
   if (host.includes('snack.expo.io')) {
     hostWithoutSubdomain = host.replace('snack.expo.io', 'expo.io');
+  } else if (host.includes('next-snack.expo.io')) {
+    hostWithoutSubdomain = host.replace('next-snack.expo.io', 'expo.io');
   } else {
     hostWithoutSubdomain = host;
   }
