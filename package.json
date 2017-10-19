@@ -9,9 +9,10 @@
   "scripts": {
     "start": "yarn run build && yarn run watch",
     "build": "cross-env NODE_ENV=production gulp clean && gulp build",
+    "prepare": "yarn build",
     "watch": "gulp watch",
     "test": "jest --config jest/test-config.json --coverage",
-    "flow-typed": "flow-typed install --flowVersion=\"$(flow version | awk '{ print $9 }')\"",
+    "flow-typed": "flow-typed install",
     "docs": "documentation readme --readme-file API.md --section \"Snack SDK API\" src/SnackSession.js"
   },
   "author": "support@getexponent.com",
@@ -49,8 +50,8 @@
     "eslint-plugin-react": "^6.6.0",
     "extend": "^3.0.0",
     "fetch-mock": "^5.11.0",
-    "flow-bin": "^0.37.4",
-    "flow-typed": "^2.0.0",
+    "flow-bin": "^0.57.3",
+    "flow-typed": "^2.2.0",
     "gulp": "github:gulpjs/gulp#4.0",
     "gulp-babel": "^6.1.2",
     "gulp-changed": "^1.3.1",

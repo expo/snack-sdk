@@ -1,5 +1,5 @@
-// flow-typed signature: 3cf2fe9b6b1f93ff5c5152e2903e2a3e
-// flow-typed version: fcaf13fb04/jest_v18.x.x/flow_>=v0.33.x
+// flow-typed signature: 8f4b2924571a9924b1661d2580c94507
+// flow-typed version: b43dff3e0e/jest_v18.x.x/flow_>=v0.16.x
 
 type JestMockFn = {
   (...args: Array<any>): any,
@@ -55,14 +55,14 @@ type JestMockFn = {
    * Sugar for only returning a value once inside your mock
    */
   mockReturnValueOnce(value: any): JestMockFn,
-}
+};
 
 type JestAsymmetricEqualityType = {
   /**
    * A custom Jasmine equality tester
    */
   asymmetricMatch(value: mixed): boolean,
-}
+};
 
 type JestCallsType = {
   allArgs(): mixed,
@@ -72,19 +72,19 @@ type JestCallsType = {
   first(): mixed,
   mostRecent(): mixed,
   reset(): void,
-}
+};
 
 type JestClockType = {
   install(): void,
   mockDate(date: Date): void,
-  tick(milliseconds?:number): void,
+  tick(milliseconds?: number): void,
   uninstall(): void,
-}
+};
 
 type JestMatcherResult = {
-  message?: string | ()=>string,
+  message?: string | (() => string),
   pass: boolean,
-}
+};
 
 type JestMatcher = (actual: any, expected: any) => JestMatcherResult;
 
@@ -225,7 +225,7 @@ type JestExpectType = {
    * matching the most recent snapshot when it is called.
    */
   toThrowErrorMatchingSnapshot(): void,
-}
+};
 
 type JestObjectType = {
   /**
@@ -289,7 +289,11 @@ type JestObjectType = {
    * The third argument can be used to create virtual mocks -- mocks of modules
    * that don't exist anywhere in the system.
    */
-  mock(moduleName: string, moduleFactory?: any, options?: Object): JestObjectType,
+  mock(
+    moduleName: string,
+    moduleFactory?: any,
+    options?: Object
+  ): JestObjectType,
   /**
    * Resets the module registry - the cache of all required modules. This is
    * useful to isolate modules where local state might conflict between tests.
@@ -342,11 +346,11 @@ type JestObjectType = {
    * Instructs Jest to use the real versions of the standard timer functions.
    */
   useRealTimers(): JestObjectType,
-}
+};
 
 type JestSpyType = {
   calls: JestCallsType,
-}
+};
 
 /** Runs this function after every test inside this context */
 declare function afterEach(fn: Function): void;
@@ -407,7 +411,7 @@ declare var expect: {
   /** The object that you want to make assertions against */
   (value: any): JestExpectType,
   /** Add additional Jasmine matchers to Jest's roster */
-  extend(matchers: {[name:string]: JestMatcher}): void,
+  extend(matchers: { [name: string]: JestMatcher }): void,
   assertions(expectedAssertions: number): void,
   any(value: mixed): JestAsymmetricEqualityType,
   anything(): void,
@@ -421,7 +425,7 @@ declare var expect: {
 declare function spyOn(value: mixed, method: string): Object;
 
 /** Holds all functions related to manipulating test runner */
-declare var jest: JestObjectType
+declare var jest: JestObjectType;
 
 /**
  * The global Jamine object, this is generally not exposed as the public API,
@@ -434,7 +438,10 @@ declare var jasmine: {
   arrayContaining(value: Array<mixed>): void,
   clock(): JestClockType,
   createSpy(name: string): JestSpyType,
-  createSpyObj(baseName: string, methodNames: Array<string>): {[methodName: string]: JestSpyType},
+  createSpyObj(
+    baseName: string,
+    methodNames: Array<string>
+  ): { [methodName: string]: JestSpyType },
   objectContaining(value: Object): void,
   stringMatching(value: string): void,
-}
+};
