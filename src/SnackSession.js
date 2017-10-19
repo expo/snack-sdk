@@ -944,7 +944,7 @@ export default class SnackSession {
       // This will skip local imports and reserved ones
       modules = pickBy(
         moduleUtils.findModuleDependencies(file),
-        (version, module) =>
+        (version: string, module: string) =>
           !module.startsWith('.') && !reserved.includes(module)
       );
     } catch (e) {
