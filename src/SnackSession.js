@@ -48,8 +48,8 @@ import config from './configs/babylon';
 
 type InitialState = {
   files: ExpoSnackFiles,
-  name: string,
-  description: string,
+  name: ?string,
+  description: ?string,
   dependencies: { [key: string]: string },
   sdkVersion?: SDKVersion,
 };
@@ -65,8 +65,6 @@ const parser = {
 
 const MIN_CHANNEL_LENGTH = 6;
 const DEBOUNCE_INTERVAL = 500;
-const DEFAULT_NAME = 'Unnamed Snack';
-const DEFAULT_DESCRIPTION = 'No description';
 const MAX_PUBNUB_SIZE = 31500;
 const S3_BUCKET_URL = 'https://snack-code-uploads';
 
@@ -98,8 +96,8 @@ export default class SnackSession {
   stateListeners: Array<ExpoStateListener> = [];
   dependencyErrorListener: ExpoDependencyErrorListener;
   host: string;
-  name: string;
-  description: string;
+  name: ?string;
+  description: ?string;
   dependencies: any; // TODO: more specific
   initialState: InitialState;
   isResolving: boolean;
@@ -128,8 +126,8 @@ export default class SnackSession {
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
     this.authorizationToken = options.authorizationToken;
     this.snackId = options.snackId;
-    this.name = options.name || DEFAULT_NAME;
-    this.description = options.description || DEFAULT_DESCRIPTION;
+    this.name = options.name;
+    this.description = options.description;
     this.dependencies = options.dependencies || {};
     this.initialState = cloneDeep({
       files: options.files,
@@ -389,8 +387,8 @@ export default class SnackSession {
     const url = `${this.expoApiUrl}/--/api/v2/snack/save`;
     const manifest: {
       sdkVersion: string,
-      name: string,
-      description: string,
+      name: ?string,
+      description: ?string,
       dependencies?: Object,
     } = {
       sdkVersion: this.sdkVersion,

@@ -101,8 +101,8 @@ export type ExpoPresenceEvent = {
 export type ExpoStateEvent = {
   files: ExpoSnackFiles,
   sdkVersion: SDKVersion,
-  name: string,
-  description: string,
+  name: ?string,
+  description: ?string,
   dependencies: any, // TODO: more specific
   isSaved: boolean,
   isResolving: boolean,
