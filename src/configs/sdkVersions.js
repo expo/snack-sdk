@@ -24,12 +24,8 @@ export const defaultSDKVersion = '16.0.0';
 export type Feature = $Keys<typeof minFeatureVersion>;
 export type SDKVersion = $Keys<typeof versions>;
 
-export const sdkSupportsFeature = (
-  sdkVersion: SDKVersion,
-  feature: Feature
-) => {
+export const sdkSupportsFeature = (sdkVersion: SDKVersion, feature: Feature) => {
   const result =
-    semver.gte(sdkVersion, minFeatureVersion[feature]) ||
-    versions[sdkVersion].includes(feature);
+    semver.gte(sdkVersion, minFeatureVersion[feature]) || versions[sdkVersion].includes(feature);
   return result;
 };

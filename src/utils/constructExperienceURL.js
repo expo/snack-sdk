@@ -9,12 +9,7 @@ type Props = {
   host: string,
 };
 
-export default function constructExperienceURL({
-  sdkVersion,
-  snackId,
-  channel,
-  host,
-}: Props) {
+export default function constructExperienceURL({ sdkVersion, snackId, channel, host }: Props) {
   let hostWithoutSubdomain;
   if (host.includes('snack.expo.io')) {
     hostWithoutSubdomain = host.replace('snack.expo.io', 'expo.io');

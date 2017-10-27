@@ -27,9 +27,7 @@ const tasks = {
         })
       )
       .pipe(babel())
-      .pipe(
-        sourcemaps.write('__sourcemaps__', { sourceRoot: '/snack-sdk/src' })
-      )
+      .pipe(sourcemaps.write('__sourcemaps__', { sourceRoot: '/snack-sdk/src' }))
       .pipe(gulp.dest(paths.build));
   },
 

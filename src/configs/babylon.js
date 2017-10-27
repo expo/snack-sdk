@@ -1,10 +1,4 @@
 export default {
-  "sourceType": "module",
-  "plugins": [
-    "jsx",
-    "flow",
-    "objectRestSpread",
-    "classProperties",
-    "asyncGenerators"
-  ]
-}
+  sourceType: 'module',
+  plugins: ['jsx', 'flow', 'objectRestSpread', 'classProperties', 'asyncGenerators'],
+};

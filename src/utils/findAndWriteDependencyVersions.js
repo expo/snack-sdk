@@ -13,10 +13,10 @@ const findModuleDependencies = (code: string): { [string]: string } => {
 
   types.visit(ast, {
     visitImportDeclaration(path) {
-      dependencies[path.node.source.value] = path.node.trailingComments &&
-        versionMatch.test(path.node.trailingComments[0].value)
-        ? trim(path.node.trailingComments[0].value.replace(/\s*/, ''))
-        : null;
+      dependencies[path.node.source.value] =
+        path.node.trailingComments && versionMatch.test(path.node.trailingComments[0].value)
+          ? trim(path.node.trailingComments[0].value.replace(/\s*/, ''))
+          : null;
       this.traverse(path);
     },
 
@@ -49,10 +49,7 @@ const findModuleDependencies = (code: string): { [string]: string } => {
 };
 
 // Writes version number in comments in code
-const writeModuleVersions = (
-  code: string,
-  dependencies: { [string]: string }
-): string => {
+const writeModuleVersions = (code: string, dependencies: { [string]: string }): string => {
   const ast = parse(code, config);
   const newCode: Array<string> = code.split('\n');
 
@@ -76,10 +73,7 @@ const writeModuleVersions = (
       const lineIndex = loc.end.line - 1;
 
       if (callee.name === 'require' && args[0]) {
-        if (
-          args[0].trailingComments ||
-          path.parentPath.parentPath.node.trailingComments
-        ) {
+        if (args[0].trailingComments || path.parentPath.parentPath.node.trailingComments) {
           newCode[lineIndex] = newCode[lineIndex].replace(/\s*\/\/.*/, '');
         }
         const module = args[0].value;

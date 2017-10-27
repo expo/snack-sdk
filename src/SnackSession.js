@@ -271,10 +271,7 @@ export default class SnackSession {
     for (const key in files) {
       if (!this.files[key] || this.files[key] !== files[key]) {
         this.files[key] = files[key];
-        if (
-          this.files[key].type === 'ASSET' &&
-          typeof this.files[key].contents === 'object'
-        ) {
+        if (this.files[key].type === 'ASSET' && typeof this.files[key].contents === 'object') {
           this.files[key].contents = await sendFileUtils.uploadAssetToS3(
             this.files[key].contents,
             this.expoApiUrl
@@ -440,8 +437,7 @@ export default class SnackSession {
         };
       } else {
         throw new Error(
-          (data.errors && data.errors[0] && data.errors[0].message) ||
-            'Failed to save code'
+          (data.errors && data.errors[0] && data.errors[0].message) || 'Failed to save code'
         );
       }
     } catch (e) {
@@ -480,10 +476,7 @@ export default class SnackSession {
     this.logListeners.forEach(listener => listener(log));
   };
 
-  _sendPresenceEvent = (
-    device: ExpoDevice,
-    status: ExpoPresenceStatus
-  ): void => {
+  _sendPresenceEvent = (device: ExpoDevice, status: ExpoPresenceStatus): void => {
     this.presenceListeners.forEach(listener =>
       listener({
         device,
@@ -493,14 +486,7 @@ export default class SnackSession {
   };
 
   _isSaved = (): boolean => {
-    const {
-      files,
-      name,
-      description,
-      dependencies,
-      sdkVersion,
-      initialState,
-    } = this;
+    const { files, name, description, dependencies, sdkVersion, initialState } = this;
 
     return isEqual(initialState, {
       files,
@@ -581,16 +567,10 @@ export default class SnackSession {
           this.s3url[key] = this.files[key].contents;
         } else if (this.s3url[key]) {
           // Send diff against code on s3
-          this.diff[key] = sendFileUtils.getFileDiff(
-            this.s3code[key],
-            this.files[key].contents
-          );
+          this.diff[key] = sendFileUtils.getFileDiff(this.s3code[key], this.files[key].contents);
         } else {
           // Send all of the code in diff (file small enough not to be uploaded)
-          this.diff[key] = sendFileUtils.getFileDiff(
-            '',
-            this.files[key].contents
-          );
+          this.diff[key] = sendFileUtils.getFileDiff('', this.files[key].contents);
         }
         fileSize.push({ name: key, size: this.diff[key].length });
       })
@@ -609,13 +589,7 @@ export default class SnackSession {
     this._sendLogEvent(message);
   };
 
-  _handleErrorMessage = ({
-    error,
-    device,
-  }: {
-    error: string,
-    device?: ExpoDevice,
-  }) => {
+  _handleErrorMessage = ({ error, device }: { error: string, device?: ExpoDevice }) => {
     if (error) {
       let rawErrorObject: ExpoPubnubError = JSON.parse(error);
       let errorObject: ExpoError = {
@@ -634,8 +608,7 @@ export default class SnackSession {
 
       if (rawErrorObject.loc) {
         errorObject.startLine = errorObject.endLine = rawErrorObject.loc.line;
-        errorObject.startColumn = errorObject.endColumn =
-          rawErrorObject.loc.column;
+        errorObject.startColumn = errorObject.endColumn = rawErrorObject.loc.column;
       }
 
       this._sendErrorEvent([errorObject]);
@@ -688,16 +661,13 @@ export default class SnackSession {
         };
       }
 
-      this.pubnub.publish(
-        { channel: this.channel, message },
-        (status, response) => {
-          if (status.error) {
-            this._error(`Error publishing code: ${status.error}`);
-          } else {
-            this._log('Published successfully!');
-          }
+      this.pubnub.publish({ channel: this.channel, message }, (status, response) => {
+        if (status.error) {
+          this._error(`Error publishing code: ${status.error}`);
+        } else {
+          this._log('Published successfully!');
         }
-      );
+      });
     }
   };
 
@@ -710,18 +680,13 @@ export default class SnackSession {
     if (!this.pubnub) {
       return;
     }
-    this.pubnub.publish(
-      { channel: this.channel, message: payload },
-      (status, response) => {
-        if (status.error) {
-          this._error(`Error publishing loading event: ${status.error}`);
-        } else {
-          this._log(
-            `Sent loading event with message: ${this.loadingMessage || ''}`
-          );
-        }
+    this.pubnub.publish({ channel: this.channel, message: payload }, (status, response) => {
+      if (status.error) {
+        this._error(`Error publishing loading event: ${status.error}`);
+      } else {
+        this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
       }
-    );
+    });
   };
 
   _getAnalyticsMetadata = () => {
@@ -807,9 +772,7 @@ export default class SnackSession {
           : ''}?platforms=ios,android`
       );
       const res = await fetch(
-        `${this.snackagerUrl}/bundle/${name}${version
-          ? `@${version}`
-          : ''}?platforms=ios,android`
+        `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
       );
 
       if (res.status === 200) {
@@ -842,9 +805,7 @@ export default class SnackSession {
         .catch(async e => {
           this._error(`Error fetching dependency: ${e}`);
 
-          if (
-            await this._checkS3ForDepencencyAsync(name, version || 'latest')
-          ) {
+          if (await this._checkS3ForDepencencyAsync(name, version || 'latest')) {
             // Snackager returned an error but the dependency is uploaded
             // to s3.
             this._promises[id] = {
@@ -860,9 +821,7 @@ export default class SnackSession {
             };
 
             if (this.dependencyErrorListener) {
-              this.dependencyErrorListener(
-                `Error fetching ${name}@${version || 'latest'}: ${e}`
-              );
+              this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e}`);
             }
           }
           return this._promises[id];
@@ -874,9 +833,7 @@ export default class SnackSession {
     const hash = (name + '@' + version).replace(/\//g, '~');
     const promises = ['ios', 'android'].map(async platform => {
       try {
-        let url = `${this.snackagerCloudfrontUrl}/${encodeURIComponent(
-          hash
-        )}-${platform}/.done`;
+        let url = `${this.snackagerCloudfrontUrl}/${encodeURIComponent(hash)}-${platform}/.done`;
 
         const res = await fetch(url);
         return res.status < 400;
@@ -907,9 +864,7 @@ export default class SnackSession {
         Object.keys(files).map(async key => {
           if (key.endsWith('.js')) {
             const codeAtStartOfFindDependencies = files[key].contents;
-            const codeWithVersions = await this._findDependenciesOnceAsync(
-              files[key].contents
-            );
+            const codeWithVersions = await this._findDependenciesOnceAsync(files[key].contents);
             if (files[key].contents === codeAtStartOfFindDependencies) {
               // can be null if no changes need to be made
               if (codeWithVersions) {
@@ -942,8 +897,7 @@ export default class SnackSession {
       // This will skip local imports and reserved ones
       modules = pickBy(
         moduleUtils.findModuleDependencies(file),
-        (version: string, module: string) =>
-          !module.startsWith('.') && !reserved.includes(module)
+        (version: string, module: string) => !module.startsWith('.') && !reserved.includes(module)
       );
     } catch (e) {
       // Likely a parse error
@@ -952,13 +906,9 @@ export default class SnackSession {
     }
 
     // Check if the dependencies already exist
-    const noNewDep =
-      difference(Object.keys(modules), Object.keys(this.dependencies))
-        .length === 0;
+    const noNewDep = difference(Object.keys(modules), Object.keys(this.dependencies)).length === 0;
     if (!Object.keys(modules).length || noNewDep) {
-      this._log(
-        `All dependencies are already loaded: ${JSON.stringify(modules)}`
-      );
+      this._log(`All dependencies are already loaded: ${JSON.stringify(modules)}`);
       return null;
     }
 
@@ -971,9 +921,7 @@ export default class SnackSession {
       // This will also trigger bundling
       this._log(`Fetching dependencies: ${JSON.stringify(modules)}`);
       const results = await Promise.all(
-        Object.keys(modules).map(name =>
-          this._maybeFetchDependencyAsync(name, modules[name])
-        )
+        Object.keys(modules).map(name => this._maybeFetchDependencyAsync(name, modules[name]))
       );
       this._log(`Got dependencies: ${JSON.stringify(results)}`);
       // results will have an error key if they failed
@@ -997,9 +945,7 @@ export default class SnackSession {
       this._sendStateEvent();
 
       // Fetch the peer dependencies
-      this._log(
-        `Fetching peer dependencies: ${JSON.stringify(peerDependencies)}`
-      );
+      this._log(`Fetching peer dependencies: ${JSON.stringify(peerDependencies)}`);
       peerDependencies = await Promise.all(
         Object.keys(peerDependencies).map(name =>
           /* $FlowFixMe */
@@ -1025,11 +971,7 @@ export default class SnackSession {
       if (peerDependencies.length) {
         const ast = parse(code, { parser });
 
-        this._log(
-          `Adding imports for peer dependencies: ${JSON.stringify(
-            peerDependencies
-          )}`
-        );
+        this._log(`Adding imports for peer dependencies: ${JSON.stringify(peerDependencies)}`);
         peerDependencies.forEach(it =>
           insertImport(ast, {
             // Insert an import statement for the module

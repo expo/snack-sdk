@@ -32,13 +32,9 @@ const insertImport = (ast: any, item: ImportDescription) => {
         // There's an import for the module, but not the specific export
         if (!imported && item.name) {
           if (item.default) {
-            path.node.specifiers.unshift(
-              b.importDefaultSpecifier(b.identifier(item.name))
-            );
+            path.node.specifiers.unshift(b.importDefaultSpecifier(b.identifier(item.name)));
           } else {
-            path.node.specifiers.push(
-              b.importSpecifier(b.identifier(item.name))
-            );
+            path.node.specifiers.push(b.importSpecifier(b.identifier(item.name)));
           }
           imported = true;
         }

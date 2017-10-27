@@ -226,9 +226,7 @@ describe('sendCodeAsync', () => {
     await timeout(50);
     fetchMock.restore();
     startMockingDate();
-    await session.sendCodeAsync(
-      codeMessageFromContents(testCode.largeCodeChanged)
-    );
+    await session.sendCodeAsync(codeMessageFromContents(testCode.largeCodeChanged));
     setMockDate(1000);
     stopMockingDate();
     await timeout(50);
@@ -268,9 +266,7 @@ describe('sendCodeAsync', () => {
         'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/dee64f147ae2e4f0a76c4837c0991f7d',
       hash: 'dee64f147ae2e4f0a76c4837c0991f7d',
     });
-    await session.sendCodeAsync(
-      codeMessageFromContents(testCode.largeCodeChangedReupload)
-    );
+    await session.sendCodeAsync(codeMessageFromContents(testCode.largeCodeChangedReupload));
     setMockDate(1000);
     stopMockingDate();
     await timeout(50);
@@ -419,9 +415,7 @@ describe('saveAsync', () => {
     expect(lastCall[0]).toEqual('https://expo.io/--/api/v2/snack/save');
     expect(lastCall[1]).toEqual({
       method: 'POST',
-      body: `{"manifest":{"sdkVersion":"16.0.0"},"code":${JSON.stringify(
-        INITIAL_CODE
-      )}}`,
+      body: `{"manifest":{"sdkVersion":"16.0.0"},"code":${JSON.stringify(INITIAL_CODE)}}`,
       headers: {
         'Content-Type': 'application/json',
       },

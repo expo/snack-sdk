@@ -47,15 +47,15 @@ class App extends Component {
     this._snack = new SnackSession({
       code,
       // sessionId is optional, will be assigned a random value if not specified
-      sessionId: Math.random().toString(36).substr(2, 8),
+      sessionId: Math.random()
+        .toString(36)
+        .substr(2, 8),
       sdkVersion: '17.0.0',
     });
 
     this._logSubscription = this._snack.addLogListener(this._onLog);
     this._errorSubscription = this._snack.addErrorListener(this._onError);
-    this._presenceSubscription = this._snack.addPresenceListener(
-      this._onPresence
-    );
+    this._presenceSubscription = this._snack.addPresenceListener(this._onPresence);
 
     this.state = {
       url: '',
@@ -134,21 +134,15 @@ class App extends Component {
         </div>
         <div>
           Last log:
-          <pre>
-            {this.state.log}
-          </pre>
+          <pre>{this.state.log}</pre>
         </div>
         <div>
           Last error:
-          <pre>
-            {this.state.error}
-          </pre>
+          <pre>{this.state.error}</pre>
         </div>
         <div>
           Last presence event:
-          <pre>
-            {this.state.presence}
-          </pre>
+          <pre>{this.state.presence}</pre>
         </div>
         <div>
           <a href="#" onClick={this._removeListeners}>
@@ -160,13 +154,12 @@ class App extends Component {
             Save
           </a>
         </div>
-        <div>
-          Save url: {this.state.saveUrl}
-        </div>
-        {this.state.saveUrl &&
+        <div>Save url: {this.state.saveUrl}</div>
+        {this.state.saveUrl && (
           <div style={{ padding: 20 }}>
             <QRCode value={this.state.saveUrl} />
-          </div>}
+          </div>
+        )}
       </div>
     );
   }
