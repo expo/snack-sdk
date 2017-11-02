@@ -906,11 +906,13 @@ export default class SnackSession {
     }
 
     // Check if the dependencies already exist
-    const newDeps = Object.keys(modules);
-    const oldDeps = pickBy(modules, (version: string, module: string) => version);
-
-    const noNewDep = difference(newDeps, oldDeps).length === 0;
-    if (!Object.keys(modules).length || noNewDep) {
+    const changedModules = Object.keys(modules).filter(moduleName => {
+      return (
+        !this.dependencies.hasOwnProperty(moduleName) ||
+        modules[moduleName] !== this.dependencies[moduleName]
+      );
+    });
+    if (!Object.keys(modules).length || !changedModules.length) {
       this._log(`All dependencies are already loaded: ${JSON.stringify(modules)}`);
       return null;
     }
