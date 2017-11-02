@@ -906,7 +906,10 @@ export default class SnackSession {
     }
 
     // Check if the dependencies already exist
-    const noNewDep = difference(Object.keys(modules), Object.keys(this.dependencies)).length === 0;
+    const newDeps = Object.keys(modules);
+    const oldDeps = pickBy(modules, (version: string, module: string) => version);
+
+    const noNewDep = difference(newDeps, oldDeps).length === 0;
     if (!Object.keys(modules).length || noNewDep) {
       this._log(`All dependencies are already loaded: ${JSON.stringify(modules)}`);
       return null;
