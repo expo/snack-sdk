@@ -20,6 +20,7 @@ import semver from 'semver';
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
+import npmVersionPins from './configs/npmVersions';
 
 let platform = null;
 
@@ -810,14 +811,14 @@ export default class SnackSession {
             // to s3.
             this._promises[id] = {
               name,
-              version: version || 'LATEST',
+              version: version || npmVersionPins.default,
               error: e.toString(),
             };
           } else {
             // Snackager returned an error and can't find on S3.
             this._promises[id] = {
               name,
-              version: 'ERROR. The Expo team has been notified.',
+              version: npmVersionPins.error,
             };
 
             if (this.dependencyErrorListener) {
