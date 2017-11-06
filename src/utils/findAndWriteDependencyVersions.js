@@ -4,6 +4,7 @@ import { types } from 'recast';
 import { parse } from 'babylon';
 import trim from 'lodash/trim';
 import config from '../configs/babylon';
+import npmVersionPins from '../configs/npmVersions';
 
 const findModuleDependencies = (code: string): { [string]: string } => {
   const dependencies: { [string]: string } = {};
@@ -63,7 +64,7 @@ const writeModuleVersions = (code: string, dependencies: { [string]: string }): 
       }
       const module = source.value;
       if (dependencies[module]) {
-        newCode[lineIndex] += ' // ' + dependencies[module] || 'error';
+        newCode[lineIndex] =  _addDependencyPin(newCode[lineIndex], dependencies[module]);
       }
       this.traverse(path);
     },
@@ -78,13 +79,21 @@ const writeModuleVersions = (code: string, dependencies: { [string]: string }): 
         }
         const module = args[0].value;
         if (dependencies[module]) {
-          newCode[lineIndex] += ' // ' + dependencies[module] || 'error';
+          newCode[lineIndex] = _addDependencyPin(newCode[lineIndex], dependencies[module]);
         }
       }
       this.traverse(path);
     },
   });
   return newCode.join('\n');
+};
+
+const _addDependencyPin = (currentLine, dependency) => {
+  const versionRegex = new RegExp(dependency);
+  if (versionRegex.test(currentLine)) {
+    return currentLine;
+  }
+  return currentLine + ' // ' + dependency || npmVersionPins.error;
 };
 
 export default { findModuleDependencies, writeModuleVersions };
