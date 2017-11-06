@@ -73,7 +73,7 @@ const writeModuleVersions = (code: string, dependencies: { [string]: string }): 
       const lineIndex = loc.end.line - 1;
 
       if (callee.name === 'require' && args[0]) {
-        if (args[0].trailingComments || path.parentPath.parentPath.node.trailingComments) {
+        if (args[0].trailingComments || path.parentPath.parentPath.value.some(it => it.trailingComments)) {
           newCode[lineIndex] = newCode[lineIndex].replace(/\s*\/\/.*/, '');
         }
         const module = args[0].value;
