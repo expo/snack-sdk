@@ -6,40 +6,60 @@ import trim from 'lodash/trim';
 import config from '../configs/babylon';
 import npmVersionPins from '../configs/npmVersions';
 
+const getModuleNameFromRequire = (node: *) => {
+  const { callee, arguments: args } = node;
+
+  let name;
+
+  if (
+    callee.name === 'require' &&
+    args.length === 1 &&
+    (args[0].type === 'StringLiteral' || args[0].type === 'TemplateLiteral')
+  ) {
+    if (args[0].type === 'StringLiteral') {
+      name = args[0].value;
+    } else if (args[0].type === 'TemplateLiteral' && args[0].quasis.length === 1) {
+      name = args[0].quasis[0].value.cooked;
+    }
+  }
+
+  return name && !/\n/.test(name) && !name.startsWith('/') ? name : null;
+};
+
+const getVersionFromComments = (comments: *) => {
+  // Makes sure version specified is valid
+  const versionFormat = /^(\s*(\d+\.)?(\d+\.)?(\*|\d+))|(LATEST)$/;
+
+  return comments && versionFormat.test(comments[0].value)
+    ? trim(comments[0].value.replace(/\s*/, ''))
+    : null;
+};
+
 const findModuleDependencies = (code: string): { [string]: string } => {
   const dependencies: { [string]: string } = {};
   const ast = parse(code, config);
-  // Makes sure version specified is valid
-  const versionMatch = RegExp(/^(\s*(\d+\.)?(\d+\.)?(\*|\d+))|(LATEST)$/);
 
   types.visit(ast, {
     visitImportDeclaration(path) {
-      dependencies[path.node.source.value] =
-        path.node.trailingComments && versionMatch.test(path.node.trailingComments[0].value)
-          ? trim(path.node.trailingComments[0].value.replace(/\s*/, ''))
-          : null;
+      const comments = path.node.trailingComments;
+
+      dependencies[path.node.source.value] = getVersionFromComments(path.node.trailingComments);
+
       this.traverse(path);
     },
 
     visitCallExpression(path) {
-      const { callee, arguments: args } = path.node;
+      const name = getModuleNameFromRequire(path.node);
 
-      if (callee.name === 'require' && args[0]) {
-        let version = null;
-        const parentPath = path.parentPath.parentPath;
+      if (name) {
+        const { arguments: args } = path.node;
 
         // Comment location changes if user uses semicolons or not
-        if (args[0].trailingComments) {
-          version = versionMatch.test(args[0].trailingComments[0].value)
-            ? trim(args[0].trailingComments[0].value.replace(/\s*/, ''))
-            : null;
-        } else if (parentPath.node.trailingComments) {
-          version = versionMatch.test(parentPath.node.trailingComments[0].value)
-            ? trim(parentPath.node.trailingComments[0].value)
-            : null;
-        }
+        const version = getVersionFromComments(
+          args[0].trailingComments || path.parentPath.parentPath.node.trailingComments
+        );
 
-        dependencies[args[0].value] = version;
+        dependencies[name] = version;
       }
 
       this.traverse(path);
@@ -64,24 +84,30 @@ const writeModuleVersions = (code: string, dependencies: { [string]: string }): 
       }
       const module = source.value;
       if (dependencies[module]) {
-        newCode[lineIndex] =  _addDependencyPin(newCode[lineIndex], dependencies[module]);
+        newCode[lineIndex] = _addDependencyPin(newCode[lineIndex], dependencies[module]);
       }
       this.traverse(path);
     },
 
     visitCallExpression(path) {
-      const { callee, arguments: args, loc } = path.node;
-      const lineIndex = loc.end.line - 1;
+      const name = getModuleNameFromRequire(path.node);
 
-      if (callee.name === 'require' && args[0]) {
-        if (args[0].trailingComments || path.parentPath.parentPath.value.some(it => it.trailingComments)) {
+      if (name) {
+        const { arguments: args, loc } = path.node;
+        const lineIndex = loc.end.line - 1;
+
+        if (
+          args[0].trailingComments ||
+          path.parentPath.parentPath.value.some(it => it.trailingComments)
+        ) {
           newCode[lineIndex] = newCode[lineIndex].replace(/\s*\/\/.*/, '');
         }
-        const module = args[0].value;
-        if (dependencies[module]) {
-          newCode[lineIndex] = _addDependencyPin(newCode[lineIndex], dependencies[module]);
+
+        if (dependencies[name]) {
+          newCode[lineIndex] = _addDependencyPin(newCode[lineIndex], dependencies[name]);
         }
       }
+
       this.traverse(path);
     },
   });
