@@ -415,7 +415,7 @@ describe('saveAsync', () => {
     expect(lastCall[0]).toEqual('https://expo.io/--/api/v2/snack/save');
     expect(lastCall[1]).toEqual({
       method: 'POST',
-      body: `{"manifest":{"sdkVersion":"16.0.0"},"code":${JSON.stringify(INITIAL_CODE)}}`,
+      body: `{"manifest":{"sdkVersion":"${defaultSDKVersion}"},"code":${JSON.stringify(INITIAL_CODE)}}`,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -441,7 +441,7 @@ describe('saveAsync', () => {
     expect(lastCall[0]).toEqual('https://expo.io/--/api/v2/snack/save');
     expect(lastCall[1]).toEqual({
       method: 'POST',
-      body: `{"manifest":{"sdkVersion":"16.0.0","name":"testname1","description":"testdescription1"},"code":${JSON.stringify(
+      body: `{"manifest":{"sdkVersion":"${defaultSDKVersion}","name":"testname1","description":"testdescription1"},"code":${JSON.stringify(
         INITIAL_CODE
       )}}`,
       headers: {
