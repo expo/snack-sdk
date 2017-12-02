@@ -13,8 +13,9 @@ const getFileDiff = (oldCode: string, newCode: string) => {
   }
 };
 
+// TODO(tc): refactor so we calculate the actual message size rather than adding this fudge for the analytics data
 const calcPayloadSize = (channel, manifest) => {
-  return encodeURIComponent(channel + JSON.stringify(manifest)).length + 100;
+  return encodeURIComponent(channel + JSON.stringify(manifest)).length + 5000;
 };
 
 const uploadCodeToS3 = async (code: string, api: string) => {
