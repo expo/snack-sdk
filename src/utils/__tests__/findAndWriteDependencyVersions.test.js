@@ -50,6 +50,70 @@ it('finds all required modules with backticks', () => {
   });
 });
 
+it('finds dependencies using all import styles', () => {
+  const code = `
+    import v from "mod1"; // 1.0.0
+    import * as ns from "mod2"; // 2.0.0
+    import {x} from "mod3"; // 3.0.0
+    import {x as v} from "mod4"; // 4.0.0
+    import "mod5"; // 5.0.0
+
+    export {x} from "mod6"; // 6.0.0
+    export {x as v} from "mod7"; // 7.0.0
+    export * from "mod8"; // 8.0.0
+
+    export default 7;
+    export const value = 6;
+    const otherValue = 5;
+    export { otherValue }
+  `;
+
+  const dependencies = moduleUtils.findModuleDependencies(code);
+  expect(dependencies).toEqual({
+    mod1: '1.0.0',
+    mod2: '2.0.0',
+    mod3: '3.0.0',
+    mod4: '4.0.0',
+    mod5: '5.0.0',
+    mod6: '6.0.0',
+    mod7: '7.0.0',
+    mod8: '8.0.0',
+  });
+});
+
+it('writes dependency pins for all import styles', () => {
+  const code = `
+    import v from "mod1";
+    import * as ns from "mod2";
+    import {x} from "mod3";
+    import {x as v} from "mod4";
+    import "mod5";
+
+    export {x} from "mod6";
+    export {x as v} from "mod7";
+    export * from "mod8";
+
+    export default 7;
+    export const value = 6;
+    const otherValue = 5;
+    export { otherValue }
+
+  `;
+  const modules = {
+    mod1: '1.0.0',
+    mod2: '2.0.0',
+    mod3: '3.0.0',
+    mod4: '4.0.0',
+    mod5: '5.0.0',
+    mod6: '6.0.0',
+    mod7: '7.0.0',
+    mod8: '8.0.0',
+  };
+
+  const finalCode = moduleUtils.writeModuleVersions(code, modules);
+  expect(finalCode).toMatchSnapshot();
+});
+
 it("doesn't parse non-static and invalid requires", () => {
   const code = `
     const base64 = require();
