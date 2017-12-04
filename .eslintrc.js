@@ -1,5 +1,5 @@
 module.exports = {
-  extends: 'exponent/react',
+  extends: ['universe/native', 'universe/node', 'universe/web'],
   globals: {
     window: true,
     navigator: true,
