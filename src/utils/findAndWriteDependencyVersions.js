@@ -41,10 +41,20 @@ const findModuleDependencies = (code: string): { [string]: string } => {
 
   types.visit(ast, {
     visitImportDeclaration(path) {
-      const comments = path.node.trailingComments;
-
       dependencies[path.node.source.value] = getVersionFromComments(path.node.trailingComments);
 
+      this.traverse(path);
+    },
+
+    visitExportNamedDeclaration(path) {
+      if (path.node.source) {
+        dependencies[path.node.source.value] = getVersionFromComments(path.node.trailingComments);
+      }
+      this.traverse(path);
+    },
+
+    visitExportAllDeclaration(path) {
+      dependencies[path.node.source.value] = getVersionFromComments(path.node.trailingComments);
       this.traverse(path);
     },
 
@@ -86,6 +96,35 @@ const writeModuleVersions = (code: string, dependencies: { [string]: string }): 
       if (dependencies[module]) {
         newCode[lineIndex] = _addDependencyPin(newCode[lineIndex], dependencies[module]);
       }
+      this.traverse(path);
+    },
+
+    visitExportNamedDeclaration(path) {
+      const { trailingComments, loc, source } = path.node;
+      const lineIndex = loc.end.line - 1;
+
+      if (trailingComments) {
+        newCode[lineIndex] = newCode[lineIndex].replace(/\s*\/\/.*/, '');
+      }
+      if (source && dependencies[source.value]) {
+        newCode[lineIndex] = _addDependencyPin(newCode[lineIndex], dependencies[source.value]);
+      }
+
+      this.traverse(path);
+    },
+
+    visitExportAllDeclaration(path) {
+      const { trailingComments, loc, source } = path.node;
+      const lineIndex = loc.end.line - 1;
+
+      if (trailingComments) {
+        newCode[lineIndex] = newCode[lineIndex].replace(/\s*\/\/.*/, '');
+      }
+      const module = source.value;
+      if (dependencies[module]) {
+        newCode[lineIndex] = _addDependencyPin(newCode[lineIndex], dependencies[module]);
+      }
+
       this.traverse(path);
     },
 
