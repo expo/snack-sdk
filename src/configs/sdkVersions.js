@@ -25,6 +25,9 @@ export type Feature = $Keys<typeof minFeatureVersion>;
 export type SDKVersion = $Keys<typeof versions>;
 
 export const sdkSupportsFeature = (sdkVersion: SDKVersion, feature: Feature) => {
+  if (!versions.hasOwnProperty(sdkVersion)) {
+    return false;
+  }
   const result =
     semver.gte(sdkVersion, minFeatureVersion[feature]) || versions[sdkVersion].includes(feature);
   return result;
