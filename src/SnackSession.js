@@ -799,12 +799,12 @@ export default class SnackSession {
     const validPackage = validate(name).validForNewPackages;
     const validVersion = version ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
-      const validationError = validPackage
+      const validationError = !validPackage
         ? new Error(`${name} is not a valid package`)
         : new Error(`Invalid version for ${name}@${version || 'latest'}`);
       this._promises[id] = {
         name,
-        version: version || npmVersionPins.default,
+        version: version || validationError.toString(),
         error: validationError.toString(),
       };
       return this._promises[id];
@@ -1005,11 +1005,12 @@ export default class SnackSession {
         code = print(ast).code;
       }
 
+      // TODO: this system will not remove old dependencies that are no longer needed!
+      Object.assign(this.dependencies, dependencies);
+
       this._log('Writing module versions');
       code = moduleUtils.writeModuleVersions(code, dependencies);
 
-      // TODO: this system will not remove old dependencies that are no longer needed!
-      Object.assign(this.dependencies, dependencies);
       this._sendStateEvent();
 
       return code;
