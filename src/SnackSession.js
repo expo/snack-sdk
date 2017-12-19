@@ -16,6 +16,7 @@ import difference from 'lodash/difference';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
 import semver from 'semver';
+import validate from 'validate-npm-package-name';
 
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
@@ -795,6 +796,20 @@ export default class SnackSession {
   _maybeFetchDependencyAsync = async (name: string, version: ?string) => {
     const id = `${name}-${version || 'latest'}`;
 
+    const validPackage = validate(name).validForNewPackages;
+    const validVersion = version ? semver.validRange(version) : true;
+    if (!validPackage || !validVersion) {
+      const validationError = validPackage
+        ? new Error(`${name} is not a valid package`)
+        : new Error(`Invalid version for ${name}@${version || 'latest'}`);
+      this._promises[id] = {
+        name,
+        version: version || npmVersionPins.default,
+        error: validationError.toString(),
+      };
+      return this._promises[id];
+    }
+
     // Cache the promise to avoid sending same request more than once
     this._promises[id] =
       this._promises[id] ||
@@ -922,6 +937,7 @@ export default class SnackSession {
     this.loadingMessage = `Installing dependencies`;
     this._sendLoadingEvent();
 
+    // TODO: only run the following code after a delay to ensure the user has finished typing
     try {
       // Fetch the dependencies
       // This will also trigger bundling
