@@ -796,12 +796,15 @@ export default class SnackSession {
   _maybeFetchDependencyAsync = async (name: string, version: ?string) => {
     const id = `${name}-${version || 'latest'}`;
 
-    const validPackage = validate(name).validForNewPackages;
+    const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
+    const fullName = (match[1] || '') + match[2];
+
+    const validPackage = validate(fullName).validForNewPackages;
     const validVersion = version ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
       const validationError = !validPackage
-        ? new Error(`${name} is not a valid package`)
-        : new Error(`Invalid version for ${name}@${version || 'latest'}`);
+        ? new Error(`${fullName} is not a valid package`)
+        : new Error(`Invalid version for ${fullName}@${version || 'latest'}`);
       this._promises[id] = {
         name,
         version: version || validationError.toString(),
