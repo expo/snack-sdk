@@ -797,7 +797,7 @@ export default class SnackSession {
     const id = `${name}-${version || 'latest'}`;
 
     const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
-    const fullName = (match[1] || '') + match[2];
+    const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
     const validPackage = validate(fullName).validForNewPackages;
     const validVersion = version ? semver.validRange(version) : true;
