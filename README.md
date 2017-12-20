@@ -1,6 +1,9 @@
 # Snack SDK
 The Expo Snack SDK. Use this to create a custom web interface for https://snack.expo.io/.
 
+If you have problems with the code in this repository, please file issues & bug reports
+at https://github.com/expo/expo. Thanks!
+
 ## Documentation
 
 - [API](API.md)
@@ -21,7 +24,7 @@ let session = new SnackSession({
 await session.startAsync();
 ```
 
-`files` is a map of all of the files included in the project.  The filenames should be the full path from the project root. 
+`files` is a map of all of the files included in the project.  The filenames should be the full path from the project root.
 
 `sdkVersion` determines what version of React Native is used on the mobile client. Defaults to `15.0.0` which maps to React Native 0.42.0. If you specify a different version, make sure to save that version along with the code. Code from one SDK version is not guaranteed to work on others. To use multiple files, you must use SDK 21 or above.
 
@@ -35,7 +38,7 @@ This url will open the current Snack Session in the Expo client when opened on a
 
 ### Updating the code
 ```javascript
-const files = { 
+const files = {
 	'app.js': { contents: 'code here, this is entry point', type: 'CODE'},
 	'folder/file.js': { contents: 'this file is in /folder', type: 'CODE'},
 	'image.png': { content: 'remote location of asset', type: 'ASSET'},
