@@ -22,6 +22,7 @@ import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
 import npmVersionPins from './configs/npmVersions';
+import preloadedModules from './configs/preloadedModules';
 
 let platform = null;
 
@@ -801,8 +802,10 @@ export default class SnackSession {
 
     const validPackageResult = validate(fullName);
     const validPackage =
-      validPackageResult.validForNewPackages &&
-      !validPackageResult.warnings.every(warning => warning.includes('is a core module name'));
+      validPackageResult.validForNewPackages ||
+      (!validPackageResult.warnings ||
+        validPackageResult.warnings.every(warning => warning.includes('is a core module name'))) ||
+      preloadedModules.includes(fullName);
     const validVersion = version ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
       const validationError = !validPackage
