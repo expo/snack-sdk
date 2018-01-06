@@ -799,7 +799,10 @@ export default class SnackSession {
     const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
     const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
-    const validPackage = validate(fullName).validForNewPackages;
+    const validPackageResult = validate(fullName);
+    const validPackage =
+      validPackageResult.validForNewPackages &&
+      !validPackageResult.warnings.every(warning => warning.includes('is a core module name'));
     const validVersion = version ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
       const validationError = !validPackage
