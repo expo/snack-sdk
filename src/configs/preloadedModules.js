@@ -318,4 +318,5 @@ export default [
   'react-native/Libraries/Renderer/shims/ReactNativePropRegistry',
   'react-native/Libraries/ART/ReactNativeART',
   'three',
+  'react-native-vector-icons',
 ];
