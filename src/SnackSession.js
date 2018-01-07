@@ -801,11 +801,12 @@ export default class SnackSession {
     const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
     const validPackageResult = validate(fullName);
+    const isPreloadedModule = preloadedModules.includes(fullName);
     const validPackage =
       validPackageResult.validForNewPackages ||
       (!validPackageResult.warnings ||
         validPackageResult.warnings.every(warning => warning.includes('is a core module name'))) ||
-      preloadedModules.includes(fullName);
+      isPreloadedModule;
     const validVersion = version ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
       const validationError = !validPackage
@@ -817,6 +818,13 @@ export default class SnackSession {
         error: validationError.toString(),
       };
       return this._promises[id];
+    }
+
+    if (isPreloadedModule) {
+      this._promises[id] = {
+        name,
+        version: 'Supported builtin module',
+      };
     }
 
     // Cache the promise to avoid sending same request more than once
