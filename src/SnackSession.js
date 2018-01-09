@@ -25,7 +25,11 @@ import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
 import { convertDependencyFormat } from './utils/projectDependencies';
-import { findModuleDependencies, writeModuleVersions } from './utils/moduleUtils';
+import {
+  findModuleDependencies,
+  writeModuleVersions,
+  removeModuleVersions,
+} from './utils/moduleUtils';
 import insertImport from './utils/insertImport';
 import config from './configs/babylon';
 
@@ -298,6 +302,21 @@ export default class SnackSession {
   // TODO: error when changing SDK to an unsupported version
   setSdkVersion = (sdkVersion: SDKVersion): void => {
     if (this.sdkVersion !== sdkVersion) {
+      if (
+        sdkSupportsFeature(sdkVersion, 'PROJECT_DEPENDENCIES') &&
+        !this.supportsFeature('PROJECT_DEPENDENCIES')
+      ) {
+        Object.keys(this.files).map(key => {
+          if (key.endsWith('.js')) {
+            try {
+              this.files[key].contents = removeModuleVersions(this.files[key].contents);
+            } catch (e) {
+              // Do nothing
+            }
+          }
+        });
+      }
+
       this.sdkVersion = sdkVersion;
 
       this._sendStateEvent();

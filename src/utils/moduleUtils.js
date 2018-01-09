@@ -4,6 +4,7 @@ import trim from 'lodash/trim';
 import { types, parse, print } from 'recast';
 import * as babylon from 'babylon';
 import config from '../configs/babylon';
+import type { ExpoDependencyV2 } from '../types';
 
 const parser = {
   parse: (code: string) => babylon.parse(code, config),
@@ -40,14 +41,24 @@ const getVersionFromComments = (comments: *) => {
     : null;
 };
 
-const addCommentToPath = (path, comment: string) => {
-  const source = print(path).code;
+const getCommentFromCallExpression = path => {
+  const { arguments: args } = path.node;
+
+  // Comment location changes if user uses semicolons or not
+  return args[0].trailingComments || path.parentPath.parentPath.node.trailingComments;
+};
+
+const replaceCommentInPath = (path, comment: string) => {
+  let source = print(path).code;
+
   const lineComment = `// ${comment}`;
   const blockComment = `/* ${comment} */`;
 
   if (source.endsWith(lineComment) || source.endsWith(blockComment)) {
     return;
   }
+
+  source = source.replace(/\/\/.+$/, '');
 
   path.replace(parse(`${source} ${lineComment}`, { parser }).program.body[0]);
 };
@@ -79,12 +90,7 @@ export const findModuleDependencies = (code: string): { [string]: string } => {
       const name = getModuleNameFromRequire(path.node);
 
       if (name) {
-        const { arguments: args } = path.node;
-
-        // Comment location changes if user uses semicolons or not
-        const version = getVersionFromComments(
-          args[0].trailingComments || path.parentPath.parentPath.node.trailingComments
-        );
+        const version = getVersionFromComments(getCommentFromCallExpression(path));
 
         dependencies[name] = version;
       }
@@ -96,17 +102,19 @@ export const findModuleDependencies = (code: string): { [string]: string } => {
   return dependencies;
 };
 
-// Writes version number in comments in code
-export const writeModuleVersions = (code: string, dependencies: { [string]: string }): string => {
+const writeImportComment = (
+  code: string,
+  getComment: (name: string, version?: ?string) => ?string
+): string => {
   const ast = parse(code, { parser });
 
   types.visit(ast, {
     visitImportDeclaration(path) {
       const name = path.node.source.value;
-      const version = dependencies[name];
+      const comment = getComment(name, getVersionFromComments(path.node.trailingComments));
 
-      if (version) {
-        addCommentToPath(path, version.version);
+      if (comment) {
+        replaceCommentInPath(path, comment);
       }
 
       return false;
@@ -114,10 +122,10 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
 
     visitExportNamedDeclaration(path) {
       const name = path.node.source && path.node.source.value;
-      const version = dependencies[name];
+      const comment = getComment(name, getVersionFromComments(path.node.trailingComments));
 
-      if (version) {
-        addCommentToPath(path, version.version);
+      if (comment) {
+        replaceCommentInPath(path, comment);
       }
 
       return false;
@@ -125,10 +133,10 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
 
     visitExportAllDeclaration(path) {
       const name = path.node.source.value;
-      const version = dependencies[name];
+      const comment = getComment(name, getVersionFromComments(path.node.trailingComments));
 
-      if (version) {
-        addCommentToPath(path, version.version);
+      if (comment) {
+        replaceCommentInPath(path, comment);
       }
 
       return false;
@@ -138,10 +146,11 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
       const name = getModuleNameFromRequire(path.node);
 
       if (name) {
-        const version = dependencies[name];
+        const version = getVersionFromComments(getCommentFromCallExpression(path));
+        const comment = getComment(name, version);
 
-        if (version) {
-          addCommentToPath(path, version.version);
+        if (comment) {
+          replaceCommentInPath(path, comment);
         }
       }
 
@@ -150,4 +159,22 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
   });
 
   return print(ast).code;
+};
+
+export const writeModuleVersions = (code: string, dependencies: ExpoDependencyV2): string => {
+  return writeImportComment(code, name => {
+    const meta = dependencies[name];
+
+    if (meta) {
+      return meta.version;
+    }
+  });
+};
+
+export const removeModuleVersions = (code: string): string => {
+  return writeImportComment(code, (name, version) => {
+    if (version) {
+      return 'Version can be specified in package.json';
+    }
+  });
 };
