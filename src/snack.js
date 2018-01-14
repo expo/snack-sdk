@@ -25,4 +25,7 @@ module.exports = {
   get findAndWriteDependencyVersions() {
     return require('./utils/findAndWriteDependencyVersions').default;
   },
+  get dependencyUtils() {
+    return require('./utils/projectDependencies');
+  },
 };
