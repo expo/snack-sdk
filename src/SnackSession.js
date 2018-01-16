@@ -23,6 +23,7 @@ import sendFileUtils from './utils/sendFileUtils';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
 import npmVersionPins from './configs/npmVersions';
 import preloadedModules from './configs/preloadedModules';
+import { convertDependencyFormat } from './utils/projectDependencies';
 
 let platform = null;
 
@@ -43,6 +44,7 @@ import type {
   ExpoDevice,
   ExpoStateListener,
   ExpoDependencyErrorListener,
+  ExpoDependencyV2,
 } from './types';
 
 import insertImport from './utils/insertImport';
@@ -53,7 +55,7 @@ type InitialState = {
   files: ExpoSnackFiles,
   name: ?string,
   description: ?string,
-  dependencies: { [key: string]: string },
+  dependencies: ExpoDependencyV2,
   sdkVersion?: SDKVersion,
 };
 
@@ -397,12 +399,13 @@ export default class SnackSession {
     };
 
     if (this.supportsFeature('ARBITRARY_IMPORTS')) {
-      manifest.dependencies = this.dependencies;
+      manifest.dependencies = convertDependencyFormat(this.dependencies, false);
     }
 
     const payload = {
       manifest,
       code: this.files,
+      dependencies: this.supportsFeature('PROJECT_DEPENDENCIES') ? this.dependencies : null,
     };
 
     try {
