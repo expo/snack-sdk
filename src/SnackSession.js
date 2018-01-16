@@ -656,10 +656,20 @@ export default class SnackSession {
           s3url: this.s3url,
           metadata,
         };
+        if (!this.supportsFeature('PROJECT_DEPENDENCIES')) {
+          if (message.diff.hasOwnProperty('App.js')) {
+            message.diff['app.js'] = message.diff['App.js'];
+            delete message.diff['App.js'];
+          }
+          if (message.s3url.hasOwnProperty('App.js')) {
+            message.s3url['app.js'] = message.s3url['App.js'];
+            delete message.s3url['App.js'];
+          }
+        }
       } else {
         message = {
           type: 'CODE',
-          code: this.files['app.js'].contents,
+          code: this.files['App.js'].contents,
           metadata,
         };
       }
