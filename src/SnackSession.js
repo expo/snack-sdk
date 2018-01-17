@@ -955,7 +955,7 @@ export default class SnackSession {
     const changedModules = Object.keys(modules).filter(moduleName => {
       return (
         !this.dependencies.hasOwnProperty(moduleName) ||
-        modules[moduleName] !== this.dependencies[moduleName]
+        modules[moduleName] !== this.dependencies[moduleName].version
       );
     });
     if (!Object.keys(modules).length || !changedModules.length) {
@@ -979,6 +979,7 @@ export default class SnackSession {
       // results will have an error key if they failed
 
       let peerDependencies = {};
+      let peerDependencyResolutions = {};
 
       // Some items might have peer dependencies
       // We need to collect them and install them
@@ -986,22 +987,22 @@ export default class SnackSession {
         if (it.dependencies) {
           Object.keys(it.dependencies).forEach(name => {
             if (!reserved.includes(name)) {
-              peerDependencies[name] = it.dependencies[name];
+              peerDependencies[name] = { version: it.dependencies[name], isUserSpecified: false };
             }
           });
         }
       });
 
       // Set dependencies to the updated list
+      // TODO: Understand if / why this line is this neccesary
       this.dependencies = { ...this.dependencies, ...peerDependencies };
       this._sendStateEvent();
 
       // Fetch the peer dependencies
       this._log(`Fetching peer dependencies: ${JSON.stringify(peerDependencies)}`);
-      peerDependencies = await Promise.all(
+      peerDependencyResolutions = await Promise.all(
         Object.keys(peerDependencies).map(name =>
-          /* $FlowFixMe */
-          this._maybeFetchDependencyAsync(name, peerDependencies[name])
+          this._maybeFetchDependencyAsync(name, peerDependencies[name].version)
         )
       );
 
@@ -1009,22 +1010,22 @@ export default class SnackSession {
       const dependencies = {};
 
       // do peerDeps first to make sure we prioritize the non-peerDeps versions
-      peerDependencies.forEach(it => {
-        dependencies[it.name] = it.version;
+      peerDependencyResolutions.forEach(it => {
+        dependencies[it.name] = { version: it.version, isUserSpecified: false };
       });
 
       results.forEach(it => {
-        dependencies[it.name] = it.version;
+        dependencies[it.name] = { version: it.version, isUserSpecified: true };
       });
 
       let code = file;
 
       // We need to insert peer dependencies in code when found
-      if (peerDependencies.length) {
+      if (peerDependencyResolutions.length) {
         const ast = parse(code, { parser });
 
         this._log(`Adding imports for peer dependencies: ${JSON.stringify(peerDependencies)}`);
-        peerDependencies.forEach(it =>
+        peerDependencyResolutions.forEach(it =>
           insertImport(ast, {
             // Insert an import statement for the module
             // This will skip the import if already present

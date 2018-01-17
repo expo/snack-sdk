@@ -154,11 +154,11 @@ const writeModuleVersions = (code: string, dependencies: { [string]: string }): 
 };
 
 const _addDependencyPin = (currentLine, dependency) => {
-  const versionRegex = new RegExp(dependency);
+  const versionRegex = new RegExp(dependency.version);
   if (versionRegex.test(currentLine)) {
     return currentLine;
   }
-  return currentLine + ' // ' + dependency || npmVersionPins.error;
+  return currentLine + ' // ' + dependency.version || npmVersionPins.error;
 };
 
 export default { findModuleDependencies, writeModuleVersions };
