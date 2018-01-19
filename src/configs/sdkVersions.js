@@ -6,7 +6,7 @@ const minFeatureVersion = {
   ARBITRARY_IMPORTS: '19.0.0', // use snackager to fetch resources
   MULTIPLE_FILES: '21.0.0', // support multiple files, communicate code changes
   // using diffs
-  PROJECT_DEPENDENCIES: '24.0.0',
+  PROJECT_DEPENDENCIES: '25.0.0',
 };
 
 // special casing of features that have been backported to particular SDK versions
