@@ -49,7 +49,7 @@ const addCommentToPath = (path, comment: string) => {
     return;
   }
 
-  path.replace(parse(`${source} ${blockComment}`, { parser }).program.body[0]);
+  path.replace(parse(`${source} ${lineComment}`, { parser }).program.body[0]);
 };
 
 export const findModuleDependencies = (code: string): { [string]: string } => {
