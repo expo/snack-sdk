@@ -850,7 +850,7 @@ export default class SnackSession {
     const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
     const validPackage = validate(fullName).validForNewPackages;
-    const validVersion = version !== 'latest' ? semver.validRange(version) : true;
+    const validVersion = version && version !== 'latest' ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
       const validationError = !validPackage
         ? new Error(`${fullName} is not a valid package`)
