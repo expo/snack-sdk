@@ -106,7 +106,7 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
       const version = dependencies[name];
 
       if (version) {
-        addCommentToPath(path, version);
+        addCommentToPath(path, version.version);
       }
 
       return false;
@@ -117,7 +117,7 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
       const version = dependencies[name];
 
       if (version) {
-        addCommentToPath(path, version);
+        addCommentToPath(path, version.version);
       }
 
       return false;
@@ -128,7 +128,7 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
       const version = dependencies[name];
 
       if (version) {
-        addCommentToPath(path, version);
+        addCommentToPath(path, version.version);
       }
 
       return false;
@@ -141,7 +141,7 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
         const version = dependencies[name];
 
         if (version) {
-          addCommentToPath(path, version);
+          addCommentToPath(path, version.version);
         }
       }
 
@@ -151,4 +151,3 @@ export const writeModuleVersions = (code: string, dependencies: { [string]: stri
 
   return print(ast).code;
 };
-
