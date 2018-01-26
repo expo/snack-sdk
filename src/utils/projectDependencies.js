@@ -2,15 +2,17 @@
 
 import mapValues from 'lodash/mapValues';
 import { sdkSupportsFeature } from '../configs/sdkVersions';
+import type { SDKVersion } from '../configs/sdkVersions';
+import type { ExpoDependencyV1, ExpoDependencyV2 } from '../types';
 
-export const standardizeDependencies = (dependencies, sdkVersion) => {
+export const standardizeDependencies = (dependencies: ExpoDependencyV2, sdkVersion: SDKVersion) => {
   return convertDependencyFormat(
     dependencies,
     sdkSupportsFeature(sdkVersion, 'PROJECT_DEPENDENCIES')
   );
 };
 
-export const convertDependencyFormat = (dependencies, shouldBeV2) => {
+export const convertDependencyFormat = (dependencies: ExpoDependencyV2, shouldBeV2: boolean) => {
   console.log(dependencies);
   const isV1 = _isV1(dependencies);
   if (shouldBeV2) {

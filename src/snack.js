@@ -25,4 +25,7 @@ module.exports = {
   get isModulePreloaded() {
     return require('./utils/isModulePreloaded').default;
   },
+  get insertImport() {
+    return require('./utils/insertImport').default;
+  },
 };

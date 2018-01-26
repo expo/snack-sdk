@@ -14,6 +14,7 @@ import isEqual from 'lodash/isEqual';
 import pickBy from 'lodash/pickBy';
 import cloneDeep from 'lodash/cloneDeep';
 import difference from 'lodash/difference';
+import compact from 'lodash/compact';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
 import semver from 'semver';
@@ -104,7 +105,7 @@ export default class SnackSession {
   host: string;
   name: ?string;
   description: ?string;
-  dependencies: any; // TODO: more specific
+  dependencies: ExpoDependencyV2; // TODO: more specific
   initialState: InitialState;
   isResolving: boolean;
   expoApiUrl: string;
@@ -475,6 +476,7 @@ export default class SnackSession {
 
   installModuleAsync = (name: string, version?: string) => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
+      // $FlowFixMe
       return new Promise((resolve, reject) => {
         this._installQueue.add(async () => {
           try {
@@ -501,7 +503,7 @@ export default class SnackSession {
 
   removeModuleAsync = async (name: string) => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
-      this.dependencies = pickBy(this.dependencies, (value, key) => key !== name);
+      this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
       this._sendStateEvent();
       this._publish();
     }
@@ -806,7 +808,10 @@ export default class SnackSession {
 
   // ARBITRARY NPM MODULES
 
-  _tryFetchDependencyAsync = async (name: string, version: ?string) => {
+  _tryFetchDependencyAsync = async (
+    name: string,
+    version: ?string
+  ): Promise<ExpoDependencyResponse> => {
     let count = 0;
     let data;
 
@@ -838,7 +843,8 @@ export default class SnackSession {
       }
     }
 
-    return data;
+    // $FlowFixMe
+    return (data: ExpoDependencyResponse);
   };
 
   _dependencyPromises: { [id: string]: Promise<ExpoDependencyResponse> } = {};
@@ -866,6 +872,7 @@ export default class SnackSession {
     this._dependencyPromises[id] = result;
 
     // Remove the promise from cache if it was rejected
+    // $FlowFixMe We are removing a key
     result.catch(() => (this._dependencyPromises[id] = null));
 
     return result;
@@ -984,6 +991,7 @@ export default class SnackSession {
         if (it.dependencies) {
           Object.keys(it.dependencies).forEach(name => {
             if (!isModulePreloaded(name)) {
+              // $FlowFixMe we already confirmed it.dependencies exists
               peerDependencies[name] = { version: it.dependencies[name], isUserSpecified: false };
             }
           });
@@ -1085,6 +1093,7 @@ export default class SnackSession {
           peerDependencies: result.dependencies
             ? Object.keys(result.dependencies).reduce((acc, curr) => {
                 acc[curr] = {
+                  // $FlowFixMe We want the whole try block to fail if result was rejected
                   version: result.dependencies[curr],
                 };
                 return acc;
@@ -1112,7 +1121,7 @@ export default class SnackSession {
       this._error(`Error Installing module: ${e.message}`);
 
       if (this.dependencyErrorListener) {
-        this.dependencyErrorListener(`Error fetching ${name}@${version}: ${e.message}`);
+        this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e.message}`);
       }
 
       throw e;
