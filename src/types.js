@@ -30,6 +30,7 @@ export type ExpoSnackSessionArguments = {
   description?: string,
   dependencies?: any, // TODO: more specific
   authorizationToken?: string,
+  enableNewDependencies?: boolean,
 };
 
 export type ExpoSubscription = {

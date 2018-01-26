@@ -112,6 +112,7 @@ export default class SnackSession {
   snackagerCloudfrontUrl: string;
   authorizationToken: ?string;
   loadingMessage: ?string;
+  enableNewDependencies: boolean;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
@@ -142,6 +143,7 @@ export default class SnackSession {
       dependencies: this.dependencies,
       sdkVersion: this.sdkVersion,
     });
+    this.enableNewDependencies = options.enableNewDependencies || false;
 
     if (this.channel.length < MIN_CHANNEL_LENGTH) {
       throw new Error('Please use a channel id with more entropy');
@@ -888,7 +890,7 @@ export default class SnackSession {
 
   _handleFindDependenciesAsync = async () => {
     if (
-      this.supportsFeature('PROJECT_DEPENDENCIES') ||
+      (this.enableNewDependencies && this.supportsFeature('PROJECT_DEPENDENCIES')) ||
       !this.supportsFeature('ARBITRARY_IMPORTS')
     ) {
       return;
@@ -1016,7 +1018,10 @@ export default class SnackSession {
       let code = file;
 
       // We need to insert peer dependencies in code when found
-      if (peerDependencyResolutions.length) {
+      if (
+        peerDependencyResolutions.length &&
+        (!this.enableNewDependencies || !this.supportsFeature('PROJECT_DEPENDENCIES'))
+      ) {
         const ast = parse(code, { parser });
 
         this._log(`Adding imports for peer dependencies: ${JSON.stringify(peerDependencies)}`);
@@ -1034,8 +1039,10 @@ export default class SnackSession {
       // TODO: this system will not remove old dependencies that are no longer needed!
       Object.assign(this.dependencies, dependencies);
 
-      this._log('Writing module versions');
-      code = writeModuleVersions(code, dependencies);
+      if (!this.enableNewDependencies || !this.supportsFeature('PROJECT_DEPENDENCIES')) {
+        this._log('Writing module versions');
+        code = writeModuleVersions(code, dependencies);
+      }
 
       this._sendStateEvent();
 
