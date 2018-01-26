@@ -30,7 +30,6 @@ export type ExpoSnackSessionArguments = {
   description?: string,
   dependencies?: any, // TODO: more specific
   authorizationToken?: string,
-  enableNewDependencies?: boolean,
 };
 
 export type ExpoSubscription = {
@@ -109,25 +108,16 @@ export type ExpoStateEvent = {
   isResolving: boolean,
 };
 
-export type ExpoDependencyV1 = {[name: string]: string};
+export type ExpoDependencyV1 = {
+  [name: string]: string,
+};
 
 export type ExpoDependencyV2 = {
   [name: string]: {
     version: string, // currently specific version, can expand to semver range, git url, snack url, js file on the web
-    // isPeerDep: boolean, // may need to have importing snacks make sense
-    resolved?: string, // result of snackager processing the resource
+    resolution?: string, // result of snackager processing the resource
+    // isPeerDep: false, // may need to have importing snacks make sense
     isUserSpecified: boolean, // can adjust version to resolve peerDeps if false
-    peerDependencies?: {
-      [name: string]: {
-        version: string
-      }
-    },
+    peerDependencies?: ExpoDependencyV1,
   },
-};
-
-export type ExpoDependencyResponse = {
-  name: string,
-  version: string,
-  dependencies?: { [key: string]: string },
-  error?: Error,
 };

@@ -1,22 +1,15 @@
 /* eslint-env jest */
 
-import { parse, print } from 'recast';
-import * as babylon from 'babylon';
-import config from '../../configs/babylon';
-import { findModuleDependencies, writeModuleVersions } from '../moduleUtils';
-
-const parser = {
-  parse: (code: string) => babylon.parse(code, config),
-};
+import moduleUtils from '../findAndWriteDependencyVersions';
 
 it('finds all imported modules', () => {
   const code = `
     import base64 from 'base64'; // 1.2.3
-    import debounce from 'lodash/debounce'; /* 2.3.4 */
+    import debounce from 'lodash/debounce'; // 2.3.4
     import { connect } from 'react-redux';
   `;
 
-  const dependencies = findModuleDependencies(code);
+  const dependencies = moduleUtils.findModuleDependencies(code);
 
   expect(dependencies).toEqual({
     base64: '1.2.3',
@@ -28,11 +21,11 @@ it('finds all imported modules', () => {
 it('finds all required modules', () => {
   const code = `
     const base64 = require('base64'); // 1.2.3
-    const debounce = require('lodash/debounce'); /* 2.3.4 */
+    const debounce = require('lodash/debounce'); // 2.3.4
     const { connect } = require('react-redux');
   `;
 
-  const dependencies = findModuleDependencies(code);
+  const dependencies = moduleUtils.findModuleDependencies(code);
 
   expect(dependencies).toEqual({
     base64: '1.2.3',
@@ -44,11 +37,11 @@ it('finds all required modules', () => {
 it('finds all required modules with backticks', () => {
   const code = `
     const base64 = require(\`base64\`); // 1.2.3
-    const debounce = require(\`lodash/debounce\`); /* 2.3.4 */
+    const debounce = require(\`lodash/debounce\`); // 2.3.4
     const { connect } = require(\`react-redux\`);
   `;
 
-  const dependencies = findModuleDependencies(code);
+  const dependencies = moduleUtils.findModuleDependencies(code);
 
   expect(dependencies).toEqual({
     base64: '1.2.3',
@@ -75,7 +68,7 @@ it('finds dependencies using all import styles', () => {
     export { otherValue }
   `;
 
-  const dependencies = findModuleDependencies(code);
+  const dependencies = moduleUtils.findModuleDependencies(code);
   expect(dependencies).toEqual({
     mod1: '1.0.0',
     mod2: '2.0.0',
@@ -117,9 +110,8 @@ it('writes dependency pins for all import styles', () => {
     mod8: '8.0.0',
   };
 
-  const result = writeModuleVersions(code, modules);
-  
-  expect(result).toMatchSnapshot();
+  const finalCode = moduleUtils.writeModuleVersions(code, modules);
+  expect(finalCode).toMatchSnapshot();
 });
 
 it("doesn't parse non-static and invalid requires", () => {
@@ -136,7 +128,7 @@ it("doesn't parse non-static and invalid requires", () => {
     const { connect } = require(10);
   `;
 
-  const dependencies = findModuleDependencies(code);
+  const dependencies = moduleUtils.findModuleDependencies(code);
 
   expect(dependencies).toEqual({});
 });
@@ -153,9 +145,9 @@ it('writes versions for imported modules', () => {
     'lodash/debounce': '2.3.4',
   };
 
-  const result = writeModuleVersions(code, modules);
+  const dependencies = moduleUtils.writeModuleVersions(code, modules);
 
-  expect(result).toMatchSnapshot();
+  expect(dependencies).toMatchSnapshot();
 });
 
 it('writes versions for required modules', () => {
@@ -170,9 +162,9 @@ it('writes versions for required modules', () => {
     'lodash/debounce': '2.3.4',
   };
 
-  const result = writeModuleVersions(code, modules);
+  const dependencies = moduleUtils.writeModuleVersions(code, modules);
 
-  expect(result).toMatchSnapshot();
+  expect(dependencies).toMatchSnapshot();
 });
 
 it('writes versions for required modules with backticks', () => {
@@ -187,7 +179,7 @@ it('writes versions for required modules with backticks', () => {
     'lodash/debounce': '2.3.4',
   };
 
-  const result = writeModuleVersions(code, modules);
+  const dependencies = moduleUtils.writeModuleVersions(code, modules);
 
-  expect(result).toMatchSnapshot();
+  expect(dependencies).toMatchSnapshot();
 });

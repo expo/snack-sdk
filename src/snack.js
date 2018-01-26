@@ -19,13 +19,13 @@ module.exports = {
   get babylonConfig() {
     return require('./configs/babylon').default;
   },
-  get dependencyUtils() {
-    return require('./utils/projectDependencies');
-  },
-  get isModulePreloaded() {
-    return require('./utils/isModulePreloaded').default;
-  },
   get insertImport() {
     return require('./utils/insertImport').default;
+  },
+  get findAndWriteDependencyVersions() {
+    return require('./utils/findAndWriteDependencyVersions').default;
+  },
+  get dependencyUtils() {
+    return require('./utils/projectDependencies');
   },
 };
