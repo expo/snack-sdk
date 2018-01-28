@@ -6,7 +6,6 @@
  */
 
 import PubNub from 'pubnub';
-import PromiseQueue from 'p-queue';
 import shortid from 'shortid';
 import debounce from 'lodash/debounce';
 import pull from 'lodash/pull';
@@ -474,30 +473,26 @@ export default class SnackSession {
     return sdkSupportsFeature(this.sdkVersion, feature);
   };
 
-  installModuleAsync = (name: string, version?: string) => {
+  installModuleAsync = async (name: string, version?: string): Promise<any> => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
-      // $FlowFixMe
-      return new Promise((resolve, reject) => {
-        this._installQueue.add(async () => {
-          try {
-            this.isResolving = true;
-            this.loadingMessage = `Installing module: ${version ? `${name}@${version}` : name}`;
-            this._sendLoadingEvent();
-            this._sendStateEvent();
+      const install = async () => {
+        try {
+          this.isResolving = true;
+          this.loadingMessage = `Installing module: ${version ? `${name}@${version}` : name}`;
+          this._sendLoadingEvent();
+          this._sendStateEvent();
 
-            const result = await this._installModuleAsync(name, version);
-            resolve(result);
-          } catch (error) {
-            reject(error);
-          } finally {
-            this.isResolving = false;
-            this.loadingMessage = '';
-            this._sendLoadingEvent();
-            this._sendStateEvent();
-            this._publish();
-          }
-        });
-      });
+          return await this._installModuleAsync(name, version);
+        } finally {
+          this.isResolving = false;
+          this.loadingMessage = '';
+          this._sendLoadingEvent();
+          this._sendStateEvent();
+          this._publish();
+        }
+      };
+
+      return (this._lastInstall = this._lastInstall.then(install, install));
     }
   };
 
@@ -510,7 +505,7 @@ export default class SnackSession {
   };
 
   // Private methods and properties
-  _installQueue = new PromiseQueue({ concurrency: 1 });
+  _lastInstall: Promise<any> = Promise.resolve();
 
   _sendErrorEvent = (errors: Array<ExpoError>): void => {
     this.errorListeners.forEach(listener => listener(errors));
