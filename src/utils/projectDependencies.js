@@ -1,18 +1,22 @@
-import { sdkSupportsFeature } from '../configs/sdkVersions';
+/* @flow */
 
-export const standardizeDependencies = (dependencies, sdkVersion) => {
+import mapValues from 'lodash/mapValues';
+import { sdkSupportsFeature } from '../configs/sdkVersions';
+import type { SDKVersion } from '../configs/sdkVersions';
+import type { ExpoDependencyV1, ExpoDependencyV2 } from '../types';
+
+export const standardizeDependencies = (dependencies: ExpoDependencyV2, sdkVersion: SDKVersion) => {
   return convertDependencyFormat(
     dependencies,
     sdkSupportsFeature(sdkVersion, 'PROJECT_DEPENDENCIES')
   );
 };
 
-export const convertDependencyFormat = (dependencies, shouldBeV2) => {
+export const convertDependencyFormat = (dependencies: ExpoDependencyV2, shouldBeV2: boolean) => {
   console.log(dependencies);
   const isV1 = _isV1(dependencies);
   if (shouldBeV2) {
     if (isV1) {
-      console.log('upgrading');
       return _convertDependenciesV1toV2(dependencies);
     } else {
       return dependencies;
@@ -21,7 +25,6 @@ export const convertDependencyFormat = (dependencies, shouldBeV2) => {
     if (isV1) {
       return dependencies;
     } else {
-      console.log('downgrading');
       return _convertDependenciesV2toV1(dependencies);
     }
   }
@@ -31,21 +34,10 @@ const _isV1 = dependencies => {
   return Object.keys(dependencies).every(dep => typeof dependencies[dep] === 'string');
 };
 
-const _convertDependenciesV1toV2 = dependencies => {
-  const convertedDeps = {};
-  for (const dep in dependencies) {
-    convertedDeps[dep] = {
-      version: dependencies[dep],
-      isUserSpecified: true,
-    };
-  }
-  return convertedDeps;
-};
+const _convertDependenciesV1toV2 = dependencies =>
+  mapValues(dependencies, version => ({
+    version,
+    isUserSpecified: true,
+  }));
 
-const _convertDependenciesV2toV1 = dependencies => {
-  const convertedDeps = {};
-  for (const dep in dependencies) {
-    convertedDeps[dep] = dependencies[dep].version;
-  }
-  return convertedDeps;
-};
+const _convertDependenciesV2toV1 = dependencies => mapValues(dependencies, dep => dep.version);

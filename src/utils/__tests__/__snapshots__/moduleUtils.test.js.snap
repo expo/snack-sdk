@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`writes dependency pins for all import styles 1`] = `
+"
+    import v from \\"mod1\\"; /* 1.0.0 */
+    import * as ns from \\"mod2\\"; /* 2.0.0 */
+    import {x} from \\"mod3\\"; /* 3.0.0 */
+    import {x as v} from \\"mod4\\"; /* 4.0.0 */
+    import \\"mod5\\"; /* 5.0.0 */
+
+    export {x} from \\"mod6\\"; /* 6.0.0 */
+    export {x as v} from \\"mod7\\"; /* 7.0.0 */
+    export * from \\"mod8\\"; /* 8.0.0 */
+
+    export default 7;
+    export const value = 6;
+    const otherValue = 5;
+    export { otherValue }
+
+  "
+`;
+
+exports[`writes versions for imported modules 1`] = `
+"
+    import base64 from 'base64'; /* 1.2.3 */
+    import debounce from 'lodash/debounce'; /* 2.3.4 */
+    import { connect } from 'react-redux';
+  "
+`;
+
+exports[`writes versions for required modules 1`] = `
+"
+    const base64 = require('base64') /* 1.2.3 */;
+    const debounce = require('lodash/debounce') /* 2.3.4 */;
+    const { connect } = require('react-redux');
+  "
+`;
+
+exports[`writes versions for required modules with backticks 1`] = `
+"
+    const base64 = require(\`base64\`) /* 1.2.3 */;
+    const debounce = require(\`lodash/debounce\`) /* 2.3.4 */;
+    const { connect } = require(\`react-redux\`);
+  "
+`;

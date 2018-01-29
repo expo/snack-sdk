@@ -6,6 +6,7 @@
  */
 
 import PubNub from 'pubnub';
+import PromiseQueue from 'p-queue';
 import shortid from 'shortid';
 import debounce from 'lodash/debounce';
 import pull from 'lodash/pull';
@@ -13,17 +14,21 @@ import isEqual from 'lodash/isEqual';
 import pickBy from 'lodash/pickBy';
 import cloneDeep from 'lodash/cloneDeep';
 import difference from 'lodash/difference';
+import compact from 'lodash/compact';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
 
+import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
+import preloadedModules from './configs/preloadedModules';
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
-import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
-import npmVersionPins from './configs/npmVersions';
-import preloadedModules from './configs/preloadedModules';
+import isModulePreloaded from './utils/isModulePreloaded';
 import { convertDependencyFormat } from './utils/projectDependencies';
+import { findModuleDependencies, writeModuleVersions } from './utils/moduleUtils';
+import insertImport from './utils/insertImport';
+import config from './configs/babylon';
 
 let platform = null;
 
@@ -45,11 +50,8 @@ import type {
   ExpoStateListener,
   ExpoDependencyErrorListener,
   ExpoDependencyV2,
+  ExpoDependencyResponse,
 } from './types';
-
-import insertImport from './utils/insertImport';
-import moduleUtils from './utils/findAndWriteDependencyVersions';
-import config from './configs/babylon';
 
 type InitialState = {
   files: ExpoSnackFiles,
@@ -103,7 +105,7 @@ export default class SnackSession {
   host: string;
   name: ?string;
   description: ?string;
-  dependencies: any; // TODO: more specific
+  dependencies: ExpoDependencyV2; // TODO: more specific
   initialState: InitialState;
   isResolving: boolean;
   expoApiUrl: string;
@@ -111,6 +113,7 @@ export default class SnackSession {
   snackagerCloudfrontUrl: string;
   authorizationToken: ?string;
   loadingMessage: ?string;
+  enableNewDependencies: boolean;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
@@ -141,15 +144,13 @@ export default class SnackSession {
       dependencies: this.dependencies,
       sdkVersion: this.sdkVersion,
     });
+    this.enableNewDependencies = options.enableNewDependencies || false;
 
     if (this.channel.length < MIN_CHANNEL_LENGTH) {
       throw new Error('Please use a channel id with more entropy');
     }
 
-    if (this.supportsFeature('ARBITRARY_IMPORTS')) {
-      // TODO: do we actually need this here?
-      this._handleFindDependenciesAsync();
-    }
+    this._handleFindDependenciesAsync();
 
     this.pubnub = new PubNub({
       publishKey: 'pub-c-2a7fd67b-333d-40db-ad2d-3255f8835f70',
@@ -461,6 +462,7 @@ export default class SnackSession {
       dependencies: this.dependencies,
       isSaved: this._isSaved(),
       isResolving: this.isResolving,
+      loadingMessage: this.loadingMessage,
     };
   };
 
@@ -472,7 +474,43 @@ export default class SnackSession {
     return sdkSupportsFeature(this.sdkVersion, feature);
   };
 
-  // Private methods
+  installModuleAsync = (name: string, version?: string) => {
+    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
+      // $FlowFixMe
+      return new Promise((resolve, reject) => {
+        this._installQueue.add(async () => {
+          try {
+            this.isResolving = true;
+            this.loadingMessage = `Installing module: ${version ? `${name}@${version}` : name}`;
+            this._sendLoadingEvent();
+            this._sendStateEvent();
+
+            const result = await this._installModuleAsync(name, version);
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          } finally {
+            this.isResolving = false;
+            this.loadingMessage = '';
+            this._sendLoadingEvent();
+            this._sendStateEvent();
+            this._publish();
+          }
+        });
+      });
+    }
+  };
+
+  removeModuleAsync = async (name: string) => {
+    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
+      this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
+      this._sendStateEvent();
+      this._publish();
+    }
+  };
+
+  // Private methods and properties
+  _installQueue = new PromiseQueue({ concurrency: 1 });
 
   _sendErrorEvent = (errors: Array<ExpoError>): void => {
     this.errorListeners.forEach(listener => listener(errors));
@@ -637,13 +675,11 @@ export default class SnackSession {
   };
 
   _publishNotDebouncedAsync = async () => {
+    await this._handleFindDependenciesAsync();
+
     if (this.loadingMessage) {
       this._sendLoadingEvent();
     } else {
-      if (this.supportsFeature('ARBITRARY_IMPORTS')) {
-        await this._handleFindDependenciesAsync();
-      }
-
       if (this.isResolving) {
         // shouldn't ever happen
         return;
@@ -657,6 +693,7 @@ export default class SnackSession {
           type: 'CODE',
           diff: this.diff,
           s3url: this.s3url,
+          dependencies: this.dependencies,
           metadata,
         };
         if (!this.supportsFeature('PROJECT_DEPENDENCIES')) {
@@ -771,7 +808,10 @@ export default class SnackSession {
 
   // ARBITRARY NPM MODULES
 
-  _tryFetchDependencyAsync = async (name: string, version: ?string) => {
+  _tryFetchDependencyAsync = async (
+    name: string,
+    version: ?string
+  ): Promise<ExpoDependencyResponse> => {
     let count = 0;
     let data;
 
@@ -803,76 +843,39 @@ export default class SnackSession {
       }
     }
 
-    return data;
+    // $FlowFixMe
+    return (data: ExpoDependencyResponse);
   };
 
-  _promises = {};
-  _maybeFetchDependencyAsync = async (name: string, version: ?string) => {
-    const id = `${name}-${version || 'latest'}`;
+  _dependencyPromises: { [id: string]: Promise<ExpoDependencyResponse> } = {};
+  _maybeFetchDependencyAsync = async (
+    name: string,
+    version: string
+  ): Promise<ExpoDependencyResponse> => {
+    const id = `${name}-${version}`;
 
     const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
     const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
-    const validPackageResult = validate(fullName);
-    const isPreloadedModule = preloadedModules.includes(fullName);
-    const validPackage =
-      validPackageResult.validForNewPackages ||
-      (!validPackageResult.warnings ||
-        validPackageResult.warnings.every(warning => warning.includes('is a core module name'))) ||
-      isPreloadedModule;
-    const validVersion = version ? semver.validRange(version) : true;
+    const validPackage = validate(fullName).validForNewPackages;
+    const validVersion = version && version !== 'latest' ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
       const validationError = !validPackage
         ? new Error(`${fullName} is not a valid package`)
-        : new Error(`Invalid version for ${fullName}@${version || 'latest'}`);
-      this._promises[id] = {
-        name,
-        version: version || validationError.toString(),
-        error: validationError.toString(),
-      };
-      return this._promises[id];
+        : new Error(`Invalid version for ${fullName}@${version}`);
+      return Promise.reject(validationError);
     }
 
-    if (isPreloadedModule) {
-      this._promises[id] = {
-        name,
-        version: 'Supported builtin module',
-      };
-    }
+    const result = this._dependencyPromises[id] || this._tryFetchDependencyAsync(name, version);
 
     // Cache the promise to avoid sending same request more than once
-    this._promises[id] =
-      this._promises[id] ||
-      this._tryFetchDependencyAsync(name, version)
-        .then(data => {
-          this._promises[id] = data;
-          return data;
-        })
-        .catch(async e => {
-          this._error(`Error fetching dependency: ${e}`);
+    this._dependencyPromises[id] = result;
 
-          if (await this._checkS3ForDepencencyAsync(name, version || 'latest')) {
-            // Snackager returned an error but the dependency is uploaded
-            // to s3.
-            this._promises[id] = {
-              name,
-              version: version || npmVersionPins.default,
-              error: e.toString(),
-            };
-          } else {
-            // Snackager returned an error and can't find on S3.
-            this._promises[id] = {
-              name,
-              version: npmVersionPins.error,
-            };
+    // Remove the promise from cache if it was rejected
+    // $FlowFixMe We are removing a key
+    result.catch(() => (this._dependencyPromises[id] = null));
 
-            if (this.dependencyErrorListener) {
-              this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e}`);
-            }
-          }
-          return this._promises[id];
-        });
-    return this._promises[id];
+    return result;
   };
 
   _checkS3ForDepencencyAsync = async (name: string, version: string) => {
@@ -893,7 +896,10 @@ export default class SnackSession {
   };
 
   _handleFindDependenciesAsync = async () => {
-    if (!this.supportsFeature('ARBITRARY_IMPORTS')) {
+    if (
+      (this.enableNewDependencies && this.supportsFeature('PROJECT_DEPENDENCIES')) ||
+      !this.supportsFeature('ARBITRARY_IMPORTS')
+    ) {
       return;
     }
 
@@ -935,15 +941,13 @@ export default class SnackSession {
       return null;
     }
 
-    const reserved = ['react', 'react-native', 'expo'];
-
     let modules: { [string]: string };
     try {
       // Find all module imports in the code
       // This will skip local imports and reserved ones
       modules = pickBy(
-        moduleUtils.findModuleDependencies(file),
-        (version: string, module: string) => !module.startsWith('.') && !reserved.includes(module)
+        findModuleDependencies(file),
+        (version: string, module: string) => !module.startsWith('.') && !isModulePreloaded(module)
       );
     } catch (e) {
       // Likely a parse error
@@ -986,7 +990,8 @@ export default class SnackSession {
       results.map(it => {
         if (it.dependencies) {
           Object.keys(it.dependencies).forEach(name => {
-            if (!reserved.includes(name)) {
+            if (!isModulePreloaded(name)) {
+              // $FlowFixMe we already confirmed it.dependencies exists
               peerDependencies[name] = { version: it.dependencies[name], isUserSpecified: false };
             }
           });
@@ -1021,7 +1026,10 @@ export default class SnackSession {
       let code = file;
 
       // We need to insert peer dependencies in code when found
-      if (peerDependencyResolutions.length) {
+      if (
+        peerDependencyResolutions.length &&
+        (!this.enableNewDependencies || !this.supportsFeature('PROJECT_DEPENDENCIES'))
+      ) {
         const ast = parse(code, { parser });
 
         this._log(`Adding imports for peer dependencies: ${JSON.stringify(peerDependencies)}`);
@@ -1039,8 +1047,10 @@ export default class SnackSession {
       // TODO: this system will not remove old dependencies that are no longer needed!
       Object.assign(this.dependencies, dependencies);
 
-      this._log('Writing module versions');
-      code = moduleUtils.writeModuleVersions(code, dependencies);
+      if (!this.enableNewDependencies || !this.supportsFeature('PROJECT_DEPENDENCIES')) {
+        this._log('Writing module versions');
+        code = writeModuleVersions(code, dependencies);
+      }
 
       this._sendStateEvent();
 
@@ -1050,6 +1060,71 @@ export default class SnackSession {
       this._error(`Error in _findDependenciesOnceAsync: ${e}`);
     } finally {
       this._sendStateEvent();
+    }
+  };
+
+  _installModuleAsync = async (name: string, version?: string) => {
+    if (!this.supportsFeature('ARBITRARY_IMPORTS')) {
+      return;
+    }
+
+    if (isModulePreloaded(name)) {
+      throw new Error(`Module is already preloaded: ${name}`);
+    }
+
+    // Check if the dependency is already installed
+    if (
+      this.dependencies[name] &&
+      (this.dependencies[name].version === version || this.dependencies[name].resolved === version)
+    ) {
+      return;
+    }
+
+    this._log(`Installing module: ${name}@${version || 'latest'}`);
+
+    try {
+      const result = await this._maybeFetchDependencyAsync(name, version || 'latest');
+
+      this.dependencies = {
+        ...this.dependencies,
+        [result.name]: {
+          version: version || result.version,
+          resolved: result.version,
+          peerDependencies: result.dependencies
+            ? Object.keys(result.dependencies).reduce((acc, curr) => {
+                acc[curr] = {
+                  // $FlowFixMe We want the whole try block to fail if result was rejected
+                  version: result.dependencies[curr],
+                };
+                return acc;
+              }, {})
+            : {},
+        },
+      };
+
+      this._sendStateEvent();
+
+      const { dependencies } = result;
+
+      if (dependencies) {
+        this._log(`Installing peer dependencies: ${JSON.stringify(dependencies)}`);
+
+        await Promise.all(
+          Object.keys(dependencies)
+            // Don't install peer dep if already installed
+            // We don't check for version as the version specified in top-level dep takes precedence
+            .filter(name => !(isModulePreloaded(name) || this.dependencies[name]))
+            .map(name => this._installModuleAsync(name, dependencies[name] || 'latest'))
+        );
+      }
+    } catch (e) {
+      this._error(`Error Installing module: ${e.message}`);
+
+      if (this.dependencyErrorListener) {
+        this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e.message}`);
+      }
+
+      throw e;
     }
   };
 }
