@@ -1,5 +1,3 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
 exports[`does not insert duplicate default import for existing module 1`] = `
 "
     import React, { Component } from 'react';
@@ -36,7 +34,7 @@ exports[`inserts default import for existing module 1`] = `
 exports[`inserts default import for new module 1`] = `
 "import React from 'react';
 
-import lodash from \\"lodash\\";
+import lodash from "lodash";
 
 export default () => <div>Hello world</div>;"
 `;
@@ -44,7 +42,7 @@ export default () => <div>Hello world</div>;"
 exports[`inserts empty import for new module 1`] = `
 "import React from 'react';
 
-import \\"babel/polyfill\\";
+import "babel/polyfill";
 
 export default () => <div>Hello world</div>;"
 `;
@@ -60,14 +58,14 @@ exports[`inserts named import for existing module 1`] = `
 exports[`inserts named import for new module 1`] = `
 "import React from 'react';
 
-import { Components } from \\"exponent\\";
+import { Components } from "exponent";
 
 export default () => <div>Hello world</div>;"
 `;
 
 exports[`test does not insert duplicate default import for existing module 1`] = `
 "
-    import React, { Component } from 'react';
+    import React, { Component } from \'react\';
 
     export default () => <div>Hello world</div>;
   "
@@ -75,8 +73,8 @@ exports[`test does not insert duplicate default import for existing module 1`] =
 
 exports[`test does not insert duplicate empty import for new module 1`] = `
 "
-    import { Component } from 'react';
-    import 'babel/polyfill';
+    import { Component } from \'react\';
+    import \'babel/polyfill\';
 
     export default () => <div>Hello world</div>;
   "
@@ -84,7 +82,7 @@ exports[`test does not insert duplicate empty import for new module 1`] = `
 
 exports[`test does not insert duplicate named import for existing module 1`] = `
 "
-    import { Component } from 'react';
+    import { Component } from \'react\';
 
     export default () => <div>Hello world</div>;
   "
@@ -92,40 +90,40 @@ exports[`test does not insert duplicate named import for existing module 1`] = `
 
 exports[`test inserts default import for existing module 1`] = `
 "
-    import React, { Component } from 'react';
+    import React, { Component } from \'react\';
 
     export default () => <div>Hello world</div>;
   "
 `;
 
 exports[`test inserts default import for new module 1`] = `
-"import React from 'react';
+"import React from \'react\';
 
-import lodash from "lodash";
+import lodash from \"lodash\";
 
 export default () => <div>Hello world</div>;"
 `;
 
 exports[`test inserts empty import for new module 1`] = `
-"import React from 'react';
+"import React from \'react\';
 
-import "babel/polyfill";
+import \"babel/polyfill\";
 
 export default () => <div>Hello world</div>;"
 `;
 
 exports[`test inserts named import for existing module 1`] = `
 "
-    import React, { Component } from 'react';
+    import React, { Component } from \'react\';
 
     export default () => <div>Hello world</div>;
   "
 `;
 
 exports[`test inserts named import for new module 1`] = `
-"import React from 'react';
+"import React from \'react\';
 
-import { Components } from "exponent";
+import { Components } from \"exponent\";
 
 export default () => <div>Hello world</div>;"
 `;

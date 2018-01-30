@@ -13,7 +13,6 @@ export const standardizeDependencies = (dependencies: ExpoDependencyV2, sdkVersi
 };
 
 export const convertDependencyFormat = (dependencies: ExpoDependencyV2, shouldBeV2: boolean) => {
-  console.log(dependencies);
   const isV1 = _isV1(dependencies);
   if (shouldBeV2) {
     if (isV1) {
