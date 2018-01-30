@@ -153,23 +153,23 @@ describe('getUrlAsync', () => {
 });
 
 describe('sendCodeAsync', () => {
-  /* 
-   *   it('sends the correct message to the device', async () => {
-   *     startMockingDate();
-   *     let session = await startDefaultSessionAsync();
-   *     await session.sendCodeAsync(NEW_CODE_MF_STYLE);
-   *     await timeout(50);
-   *     setMockDate(1000);
-   *     stopMockingDate();
-   *     expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
-   *       channel: SESSION_ID,
-   *       message: {
-   *         type: 'CODE',
-   *         code: NEW_CODE,
-   *       },
-   *     });
-   *   });
-   * */
+  it('sends the correct message to the device', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync();
+    await session.sendCodeAsync(NEW_CODE_MF_STYLE);
+    setMockDate(1000);
+    stopMockingDate();
+
+    await timeout(50);
+    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
+      channel: SESSION_ID,
+      message: {
+        type: 'CODE',
+        code: NEW_CODE,
+      },
+    });
+  });
+
   it('sends the correct message to the device when using diffs', async () => {
     startMockingDate();
     let session = await startDefaultSessionAsync({ sdkVersion: '21.0.0' });
@@ -307,84 +307,85 @@ describe('sendCodeAsync', () => {
     });
   });
 
-  /* it('logs successful publishes', async () => {
-   *   startMockingDate();
-   *   let session = await startDefaultSessionAsync({
-   *     verbose: true,
-   *   });
-   *   await session.sendCodeAsync(NEW_CODE_MF_STYLE);
+  it('logs successful publishes', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync({
+      verbose: true,
+    });
+    await session.sendCodeAsync(NEW_CODE_MF_STYLE);
 
-   *   await timeout(50);
-   *   console.log('waited for sned code');
-   *   setMockDate(1000);
-   *   stopMockingDate();
-   *   let _originalConsoleLog = console.log;
-   *   console.log = jest.genMockFunction().mockReturnValue(0);
-   *   session.pubnub._publishListener(
-   *     {
-   *       error: false,
-   *       operation: 'PNPublishOperation',
-   *       statusCode: 200,
-   *     },
-   *     {
-   *       timetoken: '14916083102347989',
-   *     }
-   *   );
-   *   expect(console.log.mock.calls.length).toEqual(1);
-   *   console.log = _originalConsoleLog;
-   * });
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
 
-   * it('logs errors', async () => {
-   *   startMockingDate();
-   *   let session = await startDefaultSessionAsync({
-   *     verbose: true,
-   *   });
-   *   await session.sendCodeAsync(NEW_CODE_MF_STYLE);
-   *   setMockDate(1000);
-   *   stopMockingDate();
-   *   let _originalConsoleError = console.error;
-   *   console.error = jest.genMockFunction().mockReturnValue(0);
-   *   session.pubnub._publishListener(
-   *     {
-   *       error: true,
-   *       operation: 'PNPublishOperation',
-   *       statusCode: 500,
-   *     },
-   *     {
-   *       timetoken: '14916083102347989',
-   *     }
-   *   );
-   *   expect(console.error.mock.calls.length).toEqual(1);
-   *   console.error = _originalConsoleError;
-   * });
-     });
+    let _originalConsoleLog = console.log;
+    console.log = jest.genMockFunction().mockReturnValue(0);
+    session.pubnub._publishListener(
+      {
+        error: false,
+        operation: 'PNPublishOperation',
+        statusCode: 200,
+      },
+      {
+        timetoken: '14916083102347989',
+      }
+    );
+    expect(console.log.mock.calls.length).toEqual(1);
+    console.log = _originalConsoleLog;
+  });
 
-     describe('error listener', () => {
-   * it('handles babel errors', async () => {
-   *   let session = await startDefaultSessionAsync({
-   *     verbose: true,
-   *   });
-   *   let errorListener = jest.fn();
-   *   session.addErrorListener(errorListener);
-   *   await session.startAsync();
+  it('logs errors', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync({
+      verbose: true,
+    });
+    await session.sendCodeAsync(NEW_CODE_MF_STYLE);
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    let _originalConsoleError = console.error;
+    console.error = jest.genMockFunction().mockReturnValue(0);
+    session.pubnub._publishListener(
+      {
+        error: true,
+        operation: 'PNPublishOperation',
+        statusCode: 500,
+      },
+      {
+        timetoken: '14916083102347989',
+      }
+    );
+    expect(console.error.mock.calls.length).toEqual(1);
+    console.error = _originalConsoleError;
+  });
+});
 
-   *   session.pubnub.__sendMessage(ERROR_MESSAGE);
+describe('error listener', () => {
+  it('handles babel errors', async () => {
+    let session = await startDefaultSessionAsync({
+      verbose: true,
+    });
+    let errorListener = jest.fn();
+    session.addErrorListener(errorListener);
+    await session.startAsync();
 
-   *   expect(errorListener.mock.calls[0][0]).toEqual([
-   *     {
-   *       device: {
-   *         id: 'b070e2d7-6218-40d5-8cc7-2879c28012b2',
-   *         name: 'SM-G930U',
-   *       },
-   *       message: `Can't find variable: BLAH`,
-   *       startLine: 57,
-   *       endLine: 57,
-   *       startColumn: 13,
-   *       endColumn: 13,
-   *       stack: 'huge stack',
-   *     },
-   *   ]);
-   * });*/
+    session.pubnub.__sendMessage(ERROR_MESSAGE);
+
+    expect(errorListener.mock.calls[0][0]).toEqual([
+      {
+        device: {
+          id: 'b070e2d7-6218-40d5-8cc7-2879c28012b2',
+          name: 'SM-G930U',
+        },
+        message: `Can't find variable: BLAH`,
+        startLine: 57,
+        endLine: 57,
+        startColumn: 13,
+        endColumn: 13,
+        stack: 'huge stack',
+      },
+    ]);
+  });
 
   it('stops sending events after .remove() is called', async () => {
     let session = await startDefaultSessionAsync({
