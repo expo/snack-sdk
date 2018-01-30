@@ -686,8 +686,8 @@ export default class SnackSession {
         await this._handleUploadCodeAsync();
         message = {
           type: 'CODE',
-          diff: this.diff,
-          s3url: this.s3url,
+          diff: cloneDeep(this.diff),
+          s3url: cloneDeep(this.s3url),
           dependencies: this.dependencies,
           metadata,
         };

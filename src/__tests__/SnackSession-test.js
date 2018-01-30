@@ -216,41 +216,41 @@ describe('sendCodeAsync', () => {
     });
   });
 
-  /* it('diff creation when file is on s3', async () => {
-   *   startMockingDate();
-   *   let session = await startDefaultSessionAsync({ sdkVersion: '21.0.0' });
-   *   fetchMock.post('*', {
-   *     url:
-   *       'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
-   *     hash: '225764978e2bee1bcf2b1372048f7cd9',
-   *   });
-   *   await session.sendCodeAsync(codeMessageFromContents(testCode.largeCode));
-   *   setMockDate(1000);
-   *   stopMockingDate();
-   *   await timeout(50);
-   *   fetchMock.restore();
-   *   startMockingDate();
-   *   await session.sendCodeAsync(codeMessageFromContents(testCode.largeCodeChanged));
-   *   setMockDate(1000);
-   *   stopMockingDate();
-   *   await timeout(50);
-   *   fetchMock.restore();
-   *   expect(session.pubnub.publish.mock.calls[1][0]).toMatchObject({
-   *     channel: SESSION_ID,
-   *     message: {
-   *       type: 'CODE',
-   *       diff: {
-   *         'app.js':
-   *           "Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -11,0 +11,1 @@\n+ And we're modifying this huge block of text. \n",
-   *       },
-   *       s3url: {
-   *         'app.js':
-   *           'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
-   *       },
-   *     },
-   *   });
-   * });
-   */
+  it('diff creation when file is on s3', async () => {
+    startMockingDate();
+    let session = await startDefaultSessionAsync({ sdkVersion: '21.0.0' });
+    fetchMock.post('*', {
+      url:
+        'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
+      hash: '225764978e2bee1bcf2b1372048f7cd9',
+    });
+    await session.sendCodeAsync(codeMessageFromContents(testCode.largeCode));
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    fetchMock.restore();
+    startMockingDate();
+    await session.sendCodeAsync(codeMessageFromContents(testCode.largeCodeChanged));
+    setMockDate(1000);
+    stopMockingDate();
+    await timeout(50);
+    fetchMock.restore();
+    expect(session.pubnub.publish.mock.calls[1][0]).toMatchObject({
+      channel: SESSION_ID,
+      message: {
+        type: 'CODE',
+        diff: {
+          'app.js':
+            "Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -11,0 +11,1 @@\n+ And we're modifying this huge block of text. \n",
+        },
+        s3url: {
+          'app.js':
+            'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
+        },
+      },
+    });
+  });
+
   it('reupload to s3 when diff is too big', async () => {
     startMockingDate();
     let session = await startDefaultSessionAsync({ sdkVersion: '21.0.0' });
