@@ -852,18 +852,13 @@ export default class SnackSession {
     const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
     const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
-    const validPackageResult = validate(fullName);
-    const isPreloadedModule = preloadedModules.includes(fullName);
-    const validPackage =
-      validPackageResult.validForNewPackages ||
-      (!validPackageResult.warnings ||
-        validPackageResult.warnings.every(warning => warning.includes('is a core module name'))) ||
-      isPreloadedModule;
-    const validVersion = version ? semver.validRange(version) : true;
+    const validPackage = validate(fullName).validForNewPackages;
+    const validVersion = version && version !== 'latest' ? semver.validRange(version) : true;
     if (!validPackage || !validVersion) {
       const validationError = !validPackage
         ? new Error(`${fullName} is not a valid package`)
-        : new Error(`Invalid version for ${fullName}@${version || 'latest'}`);
+        : new Error(`Invalid version for ${fullName}@${version}`);
+      return Promise.reject(validationError);
     }
 
     const result = this._dependencyPromises[id] || this._tryFetchDependencyAsync(name, version);
@@ -1070,9 +1065,6 @@ export default class SnackSession {
 
     if (isModulePreloaded(name)) {
       throw new Error(`Module is already preloaded: ${name}`);
-    }
-    if (name.startsWith('.')) {
-      return;
     }
 
     // Check if the dependency is already installed
