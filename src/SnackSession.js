@@ -154,6 +154,9 @@ export default class SnackSession {
     }
 
     this._handleFindDependenciesAsync();
+    if (this.supportsFeature('PROJECT_DEPENDENCIES') && this.enableNewDependencies) {
+      this._removeModuleVersionPins();
+    }
 
     this.pubnub = new PubNub({
       publishKey: 'pub-c-2a7fd67b-333d-40db-ad2d-3255f8835f70',
@@ -303,18 +306,11 @@ export default class SnackSession {
   setSdkVersion = (sdkVersion: SDKVersion): void => {
     if (this.sdkVersion !== sdkVersion) {
       if (
+        this.enableNewDependencies &&
         sdkSupportsFeature(sdkVersion, 'PROJECT_DEPENDENCIES') &&
         !this.supportsFeature('PROJECT_DEPENDENCIES')
       ) {
-        Object.keys(this.files).map(key => {
-          if (key.endsWith('.js')) {
-            try {
-              this.files[key].contents = removeModuleVersions(this.files[key].contents);
-            } catch (e) {
-              // Do nothing
-            }
-          }
-        });
+        this._removeModuleVersionPins();
       }
 
       this.sdkVersion = sdkVersion;
@@ -1075,6 +1071,18 @@ export default class SnackSession {
     } finally {
       this._sendStateEvent();
     }
+  };
+
+  _removeModuleVersionPins = () => {
+    Object.keys(this.files).map(key => {
+      if (key.endsWith('.js')) {
+        try {
+          this.files[key].contents = removeModuleVersions(this.files[key].contents);
+        } catch (e) {
+          // Do nothing
+        }
+      }
+    });
   };
 
   _installModuleAsync = async (name: string, version?: string) => {
