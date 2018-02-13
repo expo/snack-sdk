@@ -1,14 +1,14 @@
 exports[`test writes dependency pins for all import styles 1`] = `
 "
-    import v from \"mod1\"; // undefined
-    import * as ns from \"mod2\"; // undefined
-    import {x} from \"mod3\"; // undefined
-    import {x as v} from \"mod4\"; // undefined
-    import \"mod5\"; // undefined
+    import v from \"mod1\"; // 1.0.0
+    import * as ns from \"mod2\"; // 2.0.0
+    import {x} from \"mod3\"; // 3.0.0
+    import {x as v} from \"mod4\"; // 4.0.0
+    import \"mod5\"; // 5.0.0
 
-    export {x} from \"mod6\"; // undefined
-    export {x as v} from \"mod7\"; // undefined
-    export * from \"mod8\"; // undefined
+    export {x} from \"mod6\"; // 6.0.0
+    export {x as v} from \"mod7\"; // 7.0.0
+    export * from \"mod8\"; // 8.0.0
 
     export default 7;
     export const value = 6;
@@ -20,24 +20,24 @@ exports[`test writes dependency pins for all import styles 1`] = `
 
 exports[`test writes versions for imported modules 1`] = `
 "
-    import base64 from \'base64\'; // undefined
-    import debounce from \'lodash/debounce\'; // undefined
+    import base64 from \'base64\'; // 1.2.3
+    import debounce from \'lodash/debounce\'; // 2.3.4
     import { connect } from \'react-redux\';
   "
 `;
 
 exports[`test writes versions for required modules 1`] = `
 "
-    const base64 = require(\'base64\') // undefined;
-    const debounce = require(\'lodash/debounce\') // undefined;
+    const base64 = require(\'base64\') // 1.2.3;
+    const debounce = require(\'lodash/debounce\') // 2.3.4;
     const { connect } = require(\'react-redux\');
   "
 `;
 
 exports[`test writes versions for required modules with backticks 1`] = `
 "
-    const base64 = require(\`base64\`) // undefined;
-    const debounce = require(\`lodash/debounce\`) // undefined;
+    const base64 = require(\`base64\`) // 1.2.3;
+    const debounce = require(\`lodash/debounce\`) // 2.3.4;
     const { connect } = require(\`react-redux\`);
   "
 `;

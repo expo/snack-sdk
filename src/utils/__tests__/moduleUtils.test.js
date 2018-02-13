@@ -107,18 +107,17 @@ it('writes dependency pins for all import styles', () => {
 
   `;
   const modules = {
-    mod1: '1.0.0',
-    mod2: '2.0.0',
-    mod3: '3.0.0',
-    mod4: '4.0.0',
-    mod5: '5.0.0',
-    mod6: '6.0.0',
-    mod7: '7.0.0',
-    mod8: '8.0.0',
+    mod1: { version: '1.0.0' },
+    mod2: { version: '2.0.0' },
+    mod3: { version: '3.0.0' },
+    mod4: { version: '4.0.0' },
+    mod5: { version: '5.0.0' },
+    mod6: { version: '6.0.0' },
+    mod7: { version: '7.0.0' },
+    mod8: { version: '8.0.0' },
   };
 
   const result = writeModuleVersions(code, modules);
-  
   expect(result).toMatchSnapshot();
 });
 
@@ -149,8 +148,8 @@ it('writes versions for imported modules', () => {
   `;
 
   const modules = {
-    base64: '1.2.3',
-    'lodash/debounce': '2.3.4',
+    base64: { version: '1.2.3' },
+    'lodash/debounce': { version: '2.3.4' },
   };
 
   const result = writeModuleVersions(code, modules);
@@ -166,8 +165,8 @@ it('writes versions for required modules', () => {
   `;
 
   const modules = {
-    base64: '1.2.3',
-    'lodash/debounce': '2.3.4',
+    base64: { version: '1.2.3' },
+    'lodash/debounce': { version: '2.3.4' },
   };
 
   const result = writeModuleVersions(code, modules);
@@ -183,8 +182,8 @@ it('writes versions for required modules with backticks', () => {
   `;
 
   const modules = {
-    base64: '1.2.3',
-    'lodash/debounce': '2.3.4',
+    base64: { version: '1.2.3' },
+    'lodash/debounce': { version: '2.3.4' },
   };
 
   const result = writeModuleVersions(code, modules);
