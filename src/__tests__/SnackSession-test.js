@@ -133,11 +133,11 @@ describe('getUrlAsync', () => {
     let session = new SnackSession({
       files: INITIAL_CODE,
       sessionId: SESSION_ID,
-      sdkVersion: '19.0.0',
+      sdkVersion: '25.0.0',
     });
     await session.startAsync();
     let url = await session.getUrlAsync();
-    expect(url).toEqual('exp://expo.io/@snack/sdk.19.0.0-123456');
+    expect(url).toEqual('exp://expo.io/@snack/sdk.25.0.0-123456');
   });
 
   it('works correctly from expo.io host', async () => {

@@ -413,9 +413,7 @@ export default class SnackSession {
       description: this.description,
     };
 
-    if (this.supportsFeature('ARBITRARY_IMPORTS')) {
-      manifest.dependencies = convertDependencyFormat(this.dependencies, false);
-    }
+    manifest.dependencies = convertDependencyFormat(this.dependencies, false);
 
     const payload = {
       manifest,
@@ -906,10 +904,7 @@ export default class SnackSession {
   };
 
   _handleFindDependenciesAsync = async () => {
-    if (
-      (this.enableNewDependencies && this.supportsFeature('PROJECT_DEPENDENCIES')) ||
-      !this.supportsFeature('ARBITRARY_IMPORTS')
-    ) {
+    if (this.enableNewDependencies && this.supportsFeature('PROJECT_DEPENDENCIES')) {
       return;
     }
 
@@ -947,10 +942,6 @@ export default class SnackSession {
   };
 
   _findDependenciesOnceAsync = async (file: string): Promise<?string> => {
-    if (!this.supportsFeature('ARBITRARY_IMPORTS')) {
-      return null;
-    }
-
     let modules: { [string]: string };
     try {
       // Find all module imports in the code
@@ -1086,10 +1077,6 @@ export default class SnackSession {
   };
 
   _addModuleAsync = async (name: string, version?: string) => {
-    if (!this.supportsFeature('ARBITRARY_IMPORTS')) {
-      return;
-    }
-
     if (isModulePreloaded(name)) {
       throw new Error(`Module is already preloaded: ${name}`);
     }

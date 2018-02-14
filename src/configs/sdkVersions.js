@@ -1,9 +1,9 @@
 /* @flow */
+
 import semver from 'semver';
 
 // minimum SDK versions that support snack features
 const minFeatureVersion = {
-  ARBITRARY_IMPORTS: '19.0.0', // use snackager to fetch resources
   MULTIPLE_FILES: '21.0.0', // support multiple files, communicate code changes
   // using diffs
   PROJECT_DEPENDENCIES: '25.0.0',
@@ -11,7 +11,6 @@ const minFeatureVersion = {
 
 // special casing of features that have been backported to particular SDK versions
 export const versions = {
-  '19.0.0': [],
   '20.0.0': [],
   '21.0.0': [],
   '22.0.0': [],
@@ -20,7 +19,7 @@ export const versions = {
   '25.0.0': [],
 };
 
-export const defaultSDKVersion = '19.0.0';
+export const defaultSDKVersion = '20.0.0';
 
 export type Feature = $Keys<typeof minFeatureVersion>;
 export type SDKVersion = $Keys<typeof versions>;
