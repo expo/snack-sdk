@@ -488,16 +488,16 @@ export default class SnackSession {
     return sdkSupportsFeature(this.sdkVersion, feature);
   };
 
-  installModuleAsync = async (name: string, version?: string): Promise<any> => {
+  addModuleAsync = async (name: string, version?: string): Promise<any> => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
       const install = async () => {
         try {
           this.isResolving = true;
-          this.loadingMessage = `Installing module: ${version ? `${name}@${version}` : name}`;
+          this.loadingMessage = `Resolving module: ${version ? `${name}@${version}` : name}`;
           this._sendLoadingEvent();
           this._sendStateEvent();
 
-          return await this._installModuleAsync(name, version);
+          return await this._addModuleAsync(name, version);
         } finally {
           this.isResolving = false;
           this.loadingMessage = '';
@@ -978,7 +978,7 @@ export default class SnackSession {
     }
 
     this._sendStateEvent();
-    this.loadingMessage = `Installing dependencies`;
+    this.loadingMessage = `Resolving dependencies`;
     this._sendLoadingEvent();
 
     // TODO: only run the following code after a delay to ensure the user has finished typing
@@ -1085,7 +1085,7 @@ export default class SnackSession {
     });
   };
 
-  _installModuleAsync = async (name: string, version?: string) => {
+  _addModuleAsync = async (name: string, version?: string) => {
     if (!this.supportsFeature('ARBITRARY_IMPORTS')) {
       return;
     }
@@ -1102,7 +1102,7 @@ export default class SnackSession {
       return;
     }
 
-    this._log(`Installing module: ${name}@${version || 'latest'}`);
+    this._log(`Resolving module: ${name}@${version || 'latest'}`);
 
     try {
       const result = await this._maybeFetchDependencyAsync(name, version || 'latest');
@@ -1129,18 +1129,18 @@ export default class SnackSession {
       const { dependencies } = result;
 
       if (dependencies) {
-        this._log(`Installing peer dependencies: ${JSON.stringify(dependencies)}`);
+        this._log(`Resolving peer dependencies: ${JSON.stringify(dependencies)}`);
 
         await Promise.all(
           Object.keys(dependencies)
             // Don't install peer dep if already installed
             // We don't check for version as the version specified in top-level dep takes precedence
             .filter(name => !(isModulePreloaded(name) || this.dependencies[name]))
-            .map(name => this._installModuleAsync(name, dependencies[name] || 'latest'))
+            .map(name => this._addModuleAsync(name, dependencies[name] || 'latest'))
         );
       }
     } catch (e) {
-      this._error(`Error Installing module: ${e.message}`);
+      this._error(`Error resolving module: ${e.message}`);
 
       if (this.dependencyErrorListener) {
         this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e.message}`);
