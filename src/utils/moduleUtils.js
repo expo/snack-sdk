@@ -1,10 +1,13 @@
 /* @flow */
 
 import trim from 'lodash/trim';
+import trimEnd from 'lodash/trimEnd';
 import { types, parse, print } from 'recast';
 import * as babylon from 'babylon';
 import config from '../configs/babylon';
 import type { ExpoDependencyV2 } from '../types';
+
+const COMMENT_PREFIX = '<COMMENT_PREFIX>';
 
 const parser = {
   parse: (code: string) => babylon.parse(code, config),
@@ -49,18 +52,28 @@ const getCommentFromCallExpression = path => {
 };
 
 const replaceCommentInPath = (path, comment: string) => {
-  let source = print(path).code;
+  let node;
 
-  const lineComment = `// ${comment}`;
-  const blockComment = `/* ${comment} */`;
+  if (path.node.type === 'CallExpression') {
+    const { parentPath } = path;
 
-  if (source.endsWith(lineComment) || source.endsWith(blockComment)) {
-    return;
+    if (parentPath.node.type === 'VariableDeclarator') {
+      node = parentPath.parentPath.node;
+    } else {
+      node = parentPath.node;
+    }
+  } else {
+    node = path.node;
   }
 
-  source = source.replace(/\/\/.+$/, '');
-
-  path.replace(parse(`${source} ${lineComment}`, { parser }).program.body[0]);
+  node.comments = node.comments || [];
+  node.comments = node.comments.filter(comment => !(comment.type === 'Line' && comment.trailing));
+  node.comments.push({
+    type: 'Line',
+    value: COMMENT_PREFIX + ' ' + comment,
+    leading: false,
+    trailing: true,
+  });
 };
 
 export const findModuleDependencies = (code: string): { [string]: string } => {
@@ -158,7 +171,19 @@ const writeImportComment = (
     },
   });
 
-  return print(ast).code;
+  // This is a bit hacky, but it's the most reliable way of adding space before comments
+  return print(ast)
+    .code.split('\n')
+    .map(line => {
+      const i = line.lastIndexOf('//' + COMMENT_PREFIX);
+
+      if (i > 0) {
+        return trimEnd(line.slice(0, i), ' ') + ' //' + line.slice(i + COMMENT_PREFIX.length + 2, line.length);
+      }
+
+      return line;
+    })
+    .join('\n');
 };
 
 export const writeModuleVersions = (code: string, dependencies: ExpoDependencyV2): string => {
