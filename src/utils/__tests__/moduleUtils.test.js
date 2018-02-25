@@ -121,6 +121,39 @@ it('writes dependency pins for all import styles', () => {
   expect(result).toMatchSnapshot();
 });
 
+it('replaces dependency pins for all import styles', () => {
+  const code = `
+    import v from "mod1"; // 2.3.1
+    import * as ns from "mod2"; // 4.3.2
+    import {x} from "mod3"; // 5.4.3
+    import {x as v} from "mod4"; // 6.5.4
+    import "mod5"; // 7.6.5
+
+    export {x} from "mod6"; // 8.7.6
+    export {x as v} from "mod7"; // 9.8.7
+    export * from "mod8"; // 1.2.3
+
+    export default 7; // 2.3.4
+    export const value = 6; // 3.4.5
+    const otherValue = 5; // 5.7.6
+    export { otherValue } // 6.7.8
+
+  `;
+  const modules = {
+    mod1: { version: '1.0.0' },
+    mod2: { version: '2.0.0' },
+    mod3: { version: '3.0.0' },
+    mod4: { version: '4.0.0' },
+    mod5: { version: '5.0.0' },
+    mod6: { version: '6.0.0' },
+    mod7: { version: '7.0.0' },
+    mod8: { version: '8.0.0' },
+  };
+
+  const result = writeModuleVersions(code, modules);
+  expect(result).toMatchSnapshot();
+});
+
 it("doesn't parse non-static and invalid requires", () => {
   const code = `
     const base64 = require();
