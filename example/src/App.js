@@ -45,12 +45,13 @@ class App extends Component {
 
     const code = INITIAL_CODE;
     this._snack = new SnackSession({
-      code,
+      files: { 'app.js': { contents: code, type: 'CODE' } },
+      dependencies: {},
       // sessionId is optional, will be assigned a random value if not specified
       sessionId: Math.random()
         .toString(36)
         .substr(2, 8),
-      sdkVersion: '17.0.0',
+      sdkVersion: '24.0.0',
     });
 
     this._logSubscription = this._snack.addLogListener(this._onLog);
@@ -84,7 +85,7 @@ class App extends Component {
     this.setState({
       code,
     });
-    await this._snack.sendCodeAsync(code);
+    await this._snack.sendCodeAsync({ 'app.js': { contents: code, type: 'CODE' } });
   };
 
   _onLog = log => {
