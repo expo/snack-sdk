@@ -34,10 +34,15 @@ const _isV1 = dependencies => {
 };
 
 const _convertDependenciesV1toV2 = dependencies =>
-  mapValues(dependencies, version => ({
-    version,
-    resolved,
-    isUserSpecified: true,
-  }));
+  mapValues(dependencies, version => {
+    const result = {
+      version,
+      isUserSpecified: true,
+    };
+    if (version.resolved) {
+      (result: Object).resolved = version.resolved;
+    }
+    return result
+  });
 
 const _convertDependenciesV2toV1 = dependencies => mapValues(dependencies, dep => dep.version);
