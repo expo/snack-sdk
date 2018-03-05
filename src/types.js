@@ -115,7 +115,7 @@ export type ExpoDependencyV2 = {
   [name: string]: {
     version: string, // currently specific version, can expand to semver range, git url, snack url, js file on the web
     // isPeerDep: boolean, // may need to have importing snacks make sense
-    resolved?: string, // result of snackager processing the resource
+    resolved: string, // result of snackager processing the resource
     isUserSpecified: boolean, // can adjust version to resolve peerDeps if false
     peerDependencies?: {
       [name: string]: {
