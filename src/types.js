@@ -32,6 +32,8 @@ export type ExpoSnackSessionArguments = {
   dependencies?: any, // TODO: more specific
   authorizationToken?: string,
   enableNewDependencies?: boolean,
+  user: { idToken?: ?string, sessionSecret?: ?string };
+  deviceId: ?string;
 };
 
 export type ExpoSubscription = {

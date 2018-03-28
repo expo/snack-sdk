@@ -19,6 +19,7 @@ import * as babylon from 'babylon';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
 
+import * as DevSession from './utils/DevSession';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
 import preloadedModules from './configs/preloadedModules';
 import constructExperienceURL from './utils/constructExperienceURL';
@@ -118,6 +119,8 @@ export default class SnackSession {
   sessionSecret: ?string;
   loadingMessage: ?string;
   enableNewDependencies: boolean;
+  user: { idToken?: ?string, sessionSecret?: ?string };
+  deviceId: ?string;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
@@ -142,6 +145,8 @@ export default class SnackSession {
     this.name = options.name;
     this.description = options.description;
     this.dependencies = options.dependencies || {};
+    this.user = options.user || {};
+    this.deviceId = options.deviceId;
     this.initialState = cloneDeep({
       files: options.files,
       name: this.name,
@@ -227,6 +232,7 @@ export default class SnackSession {
   startAsync = async (): Promise<void> => {
     this.isStarted = true;
     this._subscribe();
+    this._startDevSession();
   };
 
   /**
@@ -237,7 +243,32 @@ export default class SnackSession {
   stopAsync = async (): Promise<void> => {
     this.s3url = {};
     this._unsubscribe();
+    this._stopDevSession();
   };
+
+  _startDevSession = () => {
+    console.log('start dev session');
+    DevSession.startSession({
+      name: this.name,
+      snackId: this.snackId,
+      sdkVersion: this.sdkVersion,
+      channel: this.channel,
+      host: this.host,
+      user: this.user,
+      deviceId: this.deviceId,
+    });
+  }
+
+  _updateDevSession = () => {
+    console.log('update dev session');
+    // stub for future update
+    this._startDevSession();
+  }
+
+  _stopDevSession = () => {
+    console.log('stop dev session');
+    DevSession.stopSession();
+  }
 
   /**
    * Returns a url that will open the current Snack session in the Expo client when opened on a phone. You can create a QR code from this link or send it to the phone in another way. See https://github.com/expo/snack-sdk/tree/master/example for how to turn this into a QR code.
@@ -318,6 +349,7 @@ export default class SnackSession {
       this.sdkVersion = sdkVersion;
 
       this._sendStateEvent();
+      this._updateDevSession();
       this._handleFindDependenciesAsync();
     }
   };
@@ -326,6 +358,16 @@ export default class SnackSession {
     if (this.name !== name) {
       this.name = name;
 
+      this._updateDevSession();
+      this._sendStateEvent();
+    }
+  };
+
+  setUser = (user: string): void => {
+    if (this.user !== user) {
+      this.user = user;
+
+      this._updateDevSession();
       this._sendStateEvent();
     }
   };
