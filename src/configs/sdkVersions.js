@@ -17,6 +17,7 @@ export const versions = {
   '23.0.0': [],
   '24.0.0': [],
   '25.0.0': [],
+  '26.0.0': [],
 };
 
 export const defaultSDKVersion = '20.0.0';
