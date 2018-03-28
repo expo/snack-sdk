@@ -247,7 +247,6 @@ export default class SnackSession {
   };
 
   _startDevSession = () => {
-    console.log('start dev session');
     DevSession.startSession({
       name: this.name,
       snackId: this.snackId,
@@ -260,13 +259,11 @@ export default class SnackSession {
   }
 
   _updateDevSession = () => {
-    console.log('update dev session');
     // stub for future update
     this._startDevSession();
   }
 
   _stopDevSession = () => {
-    console.log('stop dev session');
     DevSession.stopSession();
   }
 

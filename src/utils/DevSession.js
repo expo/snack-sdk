@@ -45,14 +45,13 @@ export async function sendKeepAliveAsync({
 
   try {
     let url = constructExperienceURL({ snackId, sdkVersion, channel, host });
-    console.log(url);
-    console.log('posting');
 
-    // TODO(brentvatne) don't hardcode the base url
-    await authenticatedPostAsync(
-      user,
-      deviceId
-    )('https://staging.expo.io/--/api/v2/development-sessions/notify-alive', {
+    let apiEndpoint = 'https://expo.io/--/api/v2/development-sessions/notify-alive';
+    if (process.env.NODE_ENV !== 'production') {
+      apiEndpoint = 'https://staging.expo.io/--/api/v2/development-sessions/notify-alive';
+    }
+
+    await authenticatedPostAsync(user, deviceId)(apiEndpoint, {
       data: {
         session: {
           description: snackId ? `${name} (${snackId})` : name || 'Unnamed Snack',
@@ -64,9 +63,7 @@ export async function sendKeepAliveAsync({
       },
     });
   } catch (e) {
-    console.log('error posting');
-    console.log(e);
-    // do nothing?
+    // TODO: do nothing if request fails?
   }
 }
 
