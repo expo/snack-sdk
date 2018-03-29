@@ -115,6 +115,7 @@ export default class SnackSession {
   snackagerUrl: string;
   snackagerCloudfrontUrl: string;
   authorizationToken: ?string;
+  sessionSecret: ?string;
   loadingMessage: ?string;
   enableNewDependencies: boolean;
 
@@ -136,6 +137,7 @@ export default class SnackSession {
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
     this.authorizationToken = options.authorizationToken;
+    this.sessionSecret = options.sessionSecret;
     this.snackId = options.snackId;
     this.name = options.name;
     this.description = options.description;
@@ -336,6 +338,10 @@ export default class SnackSession {
     }
   };
 
+  setSessionSecret = (sessionSecret: ?string): void =>{
+    this.sessionSecret = sessionSecret;
+  };
+
   setAuthorizationToken = (token: ?string): void => {
     this.authorizationToken = token;
   };
@@ -429,6 +435,9 @@ export default class SnackSession {
           'Content-Type': 'application/json',
           ...(this.authorizationToken
             ? { Authorization: `Bearer ${this.authorizationToken}` }
+            : {}),
+          ...(this.sessionSecret
+            ? { 'Expo-Session': this.sessionSecret }
             : {}),
         },
       });

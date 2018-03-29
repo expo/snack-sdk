@@ -25,6 +25,7 @@ export type ExpoSnackSessionArguments = {
   verbose?: boolean,
   sessionId?: string, // Will be randomly generated if not provided
   host?: string,
+  sessionSecret: string,
   snackId?: string,
   name?: string,
   description?: string,
