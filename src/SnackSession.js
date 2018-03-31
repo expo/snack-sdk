@@ -79,6 +79,8 @@ const DEBOUNCE_INTERVAL = 500;
 const MAX_PUBNUB_SIZE = 31500;
 const S3_BUCKET_URL = 'https://snack-code-uploads';
 
+type UserT = { idToken?: ?string, sessionSecret?: ?string };
+
 /**
  * Creates a snack session on the web. Multiple mobile devices can connect to the same session and each one will be updated when new code is pushed.
  * @param {object} options
@@ -119,7 +121,7 @@ export default class SnackSession {
   sessionSecret: ?string;
   loadingMessage: ?string;
   enableNewDependencies: boolean;
-  user: { idToken?: ?string, sessionSecret?: ?string };
+  user: UserT;
   deviceId: ?string;
 
   // Public API
@@ -360,7 +362,7 @@ export default class SnackSession {
     }
   };
 
-  setUser = (user: string): void => {
+  setUser = (user: UserT): void => {
     if (this.user !== user) {
       this.user = user;
 

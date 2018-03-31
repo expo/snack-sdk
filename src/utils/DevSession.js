@@ -1,19 +1,19 @@
 // @flow
 
 import constructExperienceURL from './constructExperienceURL';
-import type { SDKVersion } from '../config/sdkVersions';
+import type { SDKVersion } from '../configs/sdkVersions';
 
 const UPDATE_FREQUENCY_SECS = 40;
-let updateLoop = null;
+let updateLoop: any  = null;
 
 type SessionOptions = {|
-  name: string,
+  name: ?string,
   snackId: ?string,
   sdkVersion: SDKVersion,
   channel: string,
   host: string,
   user: { idToken?: ?string, sessionSecret?: ?string },
-  deviceId: string,
+  deviceId?: ?string,
 |};
 
 export async function startSession(options: SessionOptions): Promise<void> {
@@ -51,10 +51,12 @@ export async function sendKeepAliveAsync({
       apiEndpoint = 'https://staging.expo.io/--/api/v2/development-sessions/notify-alive';
     }
 
+    let displayName = name || 'Unnamed Snack';
+
     await authenticatedPostAsync(user, deviceId)(apiEndpoint, {
       data: {
         session: {
-          description: snackId ? `${name} (${snackId})` : name || 'Unnamed Snack',
+          description: snackId ? `${displayName} (${snackId})` : displayName,
           hostname: 'snack',
           config: {},
           url,
