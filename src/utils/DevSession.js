@@ -48,7 +48,7 @@ export async function sendKeepAliveAsync({
 
     let apiEndpoint = 'https://expo.io/--/api/v2/development-sessions/notify-alive';
     if (process.env.NODE_ENV !== 'production') {
-      apiEndpoint = 'https://staging.expo.io/--/api/v2/development-sessions/notify-alive';
+      apiEndpoint = '/--/api/v2/development-sessions/notify-alive';
     }
 
     let displayName = name || 'Unnamed Snack';
