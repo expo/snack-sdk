@@ -1,8 +1,6 @@
 /* flow */
 
 var diff = require('diff');
-var fetch = require('node-fetch');
-var FormData = require('form-data');
 
 const getFileDiff = (oldCode: string, newCode: string) => {
   const patch = diff.createPatch('code', oldCode, newCode, '', '', {
