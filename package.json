@@ -3,6 +3,7 @@
   "version": "1.0.11",
   "description": "The Expo Snack SDK",
   "main": "build/snack.js",
+  "repository": "expo/snack-sdk",
   "files": [
     "build"
   ],
