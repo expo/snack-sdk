@@ -46,10 +46,8 @@ export async function sendKeepAliveAsync({
   try {
     let url = constructExperienceURL({ snackId, sdkVersion, channel, host });
 
-    let apiEndpoint = 'https://expo.io/--/api/v2/development-sessions/notify-alive';
-    if (process.env.NODE_ENV !== 'production') {
-      apiEndpoint = '/--/api/v2/development-sessions/notify-alive';
-    }
+    let apiServer = process.env.API_SERVER_URL || 'https://expo.io';
+    let apiEndpoint = `${apiServer}/--/api/v2/development-sessions/notify-alive`;
 
     let displayName = name || 'Unnamed Snack';
 
