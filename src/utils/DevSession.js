@@ -4,7 +4,7 @@ import constructExperienceURL from './constructExperienceURL';
 import type { SDKVersion } from '../configs/sdkVersions';
 
 const UPDATE_FREQUENCY_SECS = 40;
-let updateLoop: any  = null;
+let updateLoop: any = null;
 
 type SessionOptions = {|
   name: ?string,
@@ -16,12 +16,14 @@ type SessionOptions = {|
   deviceId?: ?string,
 |};
 
-export async function startSession(options: SessionOptions): Promise<void> {
+export async function startSessionAsync(options: SessionOptions): Promise<void> {
   stopSession();
-  sendKeepAliveAsync(options);
+
   updateLoop = setInterval(() => {
     sendKeepAliveAsync(options);
   }, UPDATE_FREQUENCY_SECS * 1000);
+
+  return sendKeepAliveAsync(options);
 }
 
 export function stopSession() {
@@ -43,33 +45,27 @@ export async function sendKeepAliveAsync({
     return;
   }
 
-  try {
-    let url = constructExperienceURL({ snackId, sdkVersion, channel, host });
+  let url = constructExperienceURL({ snackId, sdkVersion, channel, host });
 
-    let apiServer = process.env.API_SERVER_URL || 'https://expo.io';
-    let apiEndpoint = `${apiServer}/--/api/v2/development-sessions/notify-alive`;
+  let apiServer = process.env.API_SERVER_URL || 'https://expo.io';
+  let apiEndpoint = `${apiServer}//--/api/v2/development-sessions/notify-alive`;
 
-    let displayName = name || 'Unnamed Snack';
+  let displayName = name || 'Unnamed Snack';
 
-    await authenticatedPostAsync(user, deviceId)(apiEndpoint, {
-      data: {
-        session: {
-          description: snackId ? `${displayName} (${snackId})` : displayName,
-          hostname: 'snack',
-          config: {},
-          url,
-          source: 'snack',
-        },
+  await authenticatedPostAsync(user, deviceId)(apiEndpoint, {
+    data: {
+      session: {
+        description: snackId ? `${displayName} (${snackId})` : displayName,
+        hostname: 'snack',
+        config: {},
+        url,
+        source: 'snack',
       },
-    });
-  } catch (e) {
-    // TODO: do nothing if request fails?
-  }
+    },
+  });
 }
 
-const authenticatedPostAsync = (user, deviceId) => (url, body) => {
-  // TODO: do something with deviceId
-
+const authenticatedPostAsync = (user, deviceId) => async (url, body) => {
   const { idToken, sessionSecret } = user;
 
   let headers = {
@@ -84,5 +80,17 @@ const authenticatedPostAsync = (user, deviceId) => (url, body) => {
     headers,
   };
 
-  return fetch(url, optionsWithAuth);
+  let endpoint = url;
+
+  if (deviceId) {
+    endpoint = `${url}?deviceId=${deviceId}`;
+  }
+
+  const response = await fetch(endpoint, optionsWithAuth);
+
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+
+  return response;
 };

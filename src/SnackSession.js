@@ -234,7 +234,7 @@ export default class SnackSession {
   startAsync = async (): Promise<void> => {
     this.isStarted = true;
     this._subscribe();
-    this._startDevSession();
+    this._startDevSessionAsync();
   };
 
   /**
@@ -248,8 +248,8 @@ export default class SnackSession {
     this._stopDevSession();
   };
 
-  _startDevSession = () => {
-    DevSession.startSession({
+  _startDevSessionAsync = (): Promise<void> => {
+    return DevSession.startSessionAsync({
       name: this.name,
       snackId: this.snackId,
       sdkVersion: this.sdkVersion,
@@ -258,16 +258,16 @@ export default class SnackSession {
       user: this.user,
       deviceId: this.deviceId,
     });
-  }
+  };
 
-  _updateDevSession = () => {
+  _updateDevSession = (): Promise<void> => {
     // stub for future update
-    this._startDevSession();
-  }
+    return this._startDevSessionAsync();
+  };
 
   _stopDevSession = () => {
     DevSession.stopSession();
-  }
+  };
 
   /**
    * Returns a url that will open the current Snack session in the Expo client when opened on a phone. You can create a QR code from this link or send it to the phone in another way. See https://github.com/expo/snack-sdk/tree/master/example for how to turn this into a QR code.
@@ -379,12 +379,17 @@ export default class SnackSession {
     }
   };
 
-  setSessionSecret = (sessionSecret: ?string): void =>{
+  setSessionSecret = (sessionSecret: ?string): void => {
     this.sessionSecret = sessionSecret;
   };
 
   setAuthorizationToken = (token: ?string): void => {
     this.authorizationToken = token;
+  };
+
+  setDeviceId = (deviceId: string): Promise<mixed> => {
+    this.deviceId = deviceId;
+    return this._updateDevSession();
   };
 
   /**
@@ -477,9 +482,7 @@ export default class SnackSession {
           ...(this.authorizationToken
             ? { Authorization: `Bearer ${this.authorizationToken}` }
             : {}),
-          ...(this.sessionSecret
-            ? { 'Expo-Session': this.sessionSecret }
-            : {}),
+          ...(this.sessionSecret ? { 'Expo-Session': this.sessionSecret } : {}),
         },
       });
       const data = await response.json();
