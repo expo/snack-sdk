@@ -11,7 +11,6 @@ const minFeatureVersion = {
 
 // special casing of features that have been backported to particular SDK versions
 export const versions = {
-  '20.0.0': [],
   '21.0.0': [],
   '22.0.0': [],
   '23.0.0': [],
@@ -20,7 +19,7 @@ export const versions = {
   '26.0.0': [],
 };
 
-export const defaultSDKVersion = '20.0.0';
+export const defaultSDKVersion = '21.0.0';
 
 export type Feature = $Keys<typeof minFeatureVersion>;
 export type SDKVersion = $Keys<typeof versions>;
