@@ -36,6 +36,8 @@ import insertImport from './utils/insertImport';
 import config from './configs/babylon';
 
 let platform = null;
+// + and - are used as delimiters in the uri, ensure they do not appear in the channel itself
+shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!_');
 
 // eslint-disable-next-line no-duplicate-imports
 import type { SDKVersion, Feature } from './configs/sdkVersions';
@@ -292,7 +294,7 @@ export default class SnackSession {
    * @param {Promise.<https://developer.mozilla.org/en-US/docs/Web/API/File>}
    * @returns {Promise.<string>} A promise that contains the url when fulfilled
    * @function
-  */
+   */
   uploadAssetAsync = async (content: Object): Promise<string> => {
     return sendFileUtils.uploadAssetToS3(content, this.expoApiUrl);
   };
@@ -885,9 +887,9 @@ export default class SnackSession {
       count++;
 
       this._log(
-        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version
-          ? `@${version}`
-          : ''}?platforms=ios,android`
+        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${
+          version ? `@${version}` : ''
+        }?platforms=ios,android`
       );
       const res = await fetch(
         `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
