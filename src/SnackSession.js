@@ -384,10 +384,17 @@ export default class SnackSession {
 
   setSessionSecret = (sessionSecret: ?string): void => {
     this.sessionSecret = sessionSecret;
+    this.setUser({ sessionSecret });
+
+    this._updateDevSession();
+    this._sendStateEvent();
   };
 
   setAuthorizationToken = (token: ?string): void => {
     this.authorizationToken = token;
+
+    this._updateDevSession();
+    this._sendStateEvent();
   };
 
   setDeviceId = (deviceId: string): Promise<mixed> => {
