@@ -1011,7 +1011,8 @@ export default class SnackSession {
       // This will skip local imports and reserved ones
       modules = pickBy(
         findModuleDependencies(file),
-        (version: string, module: string) => !module.startsWith('.') && !isModulePreloaded(module)
+        (version: string, module: string) =>
+          !module.startsWith('.') && !isModulePreloaded(module, this.sdkVersion)
       );
     } catch (e) {
       // Likely a parse error
@@ -1054,7 +1055,7 @@ export default class SnackSession {
       results.map(it => {
         if (it.dependencies) {
           Object.keys(it.dependencies).forEach(name => {
-            if (!isModulePreloaded(name)) {
+            if (!isModulePreloaded(name, this.sdkVersion)) {
               // $FlowFixMe we already confirmed it.dependencies exists
               peerDependencies[name] = { version: it.dependencies[name], isUserSpecified: false };
             }
@@ -1140,7 +1141,7 @@ export default class SnackSession {
   };
 
   _addModuleAsync = async (name: string, version?: string) => {
-    if (isModulePreloaded(name)) {
+    if (isModulePreloaded(name, this.sdkVersion)) {
       throw new Error(`Module is already preloaded: ${name}`);
     }
 
@@ -1185,7 +1186,7 @@ export default class SnackSession {
           Object.keys(dependencies)
             // Don't install peer dep if already installed
             // We don't check for version as the version specified in top-level dep takes precedence
-            .filter(name => !(isModulePreloaded(name) || this.dependencies[name]))
+            .filter(name => !(isModulePreloaded(name, this.sdkVersion) || this.dependencies[name]))
             .map(name => this._addModuleAsync(name, dependencies[name] || 'latest'))
         );
       }
