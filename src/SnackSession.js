@@ -144,14 +144,26 @@ export default class SnackSession {
     this.expoApiUrl = 'https://expo.io';
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
-    this.authorizationToken = options.authorizationToken;
-    this.sessionSecret = options.sessionSecret;
+    if (options.authorizationToken) {
+      console.warn('authorizationToken has been deprecrated. see options.user');
+    }
+    if (options.sessionSecret) {
+      console.warn('sessionSecret has been deprecrated. see options.user');
+    }
+    this.user = options.user || {};
+    this.user = {
+      ...this.user,
+      ...{
+        idToken: options.authorizationToken,
+        sessionSecret: options.sessionSecret,
+      },
+    };
+    this.deviceId = options.deviceId;
+
     this.snackId = options.snackId;
     this.name = options.name;
     this.description = options.description;
     this.dependencies = options.dependencies || {};
-    this.user = options.user || {};
-    this.deviceId = options.deviceId;
     this.initialState = cloneDeep({
       files: options.files,
       name: this.name,
@@ -383,7 +395,7 @@ export default class SnackSession {
   };
 
   setSessionSecret = (sessionSecret: ?string): void => {
-    this.sessionSecret = sessionSecret;
+    console.warn('sessionSecret has been deprecrated. see options.user');
     this.setUser({ sessionSecret });
 
     this._updateDevSession();
@@ -391,7 +403,8 @@ export default class SnackSession {
   };
 
   setAuthorizationToken = (token: ?string): void => {
-    this.authorizationToken = token;
+    console.warn('authorizationToken has been deprecrated. see options.user');
+    this.setUser({ idToken: token });
 
     this._updateDevSession();
     this._sendStateEvent();
@@ -489,10 +502,8 @@ export default class SnackSession {
         body: JSON.stringify(payload),
         headers: {
           'Content-Type': 'application/json',
-          ...(this.authorizationToken
-            ? { Authorization: `Bearer ${this.authorizationToken}` }
-            : {}),
-          ...(this.sessionSecret ? { 'Expo-Session': this.sessionSecret } : {}),
+          ...(this.user.idToken ? { Authorization: `Bearer ${this.user.idToken}` } : {}),
+          ...(this.user.sessionSecret ? { 'Expo-Session': this.user.sessionSecret } : {}),
         },
       });
       const data = await response.json();
