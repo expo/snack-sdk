@@ -171,14 +171,13 @@ export default class SnackSession {
       dependencies: this.dependencies,
       sdkVersion: this.sdkVersion,
     });
-    this.enableNewDependencies = options.enableNewDependencies || false;
 
     if (this.channel.length < MIN_CHANNEL_LENGTH) {
       throw new Error('Please use a channel id with more entropy');
     }
 
     this._handleFindDependenciesAsync();
-    if (this.supportsFeature('PROJECT_DEPENDENCIES') && this.enableNewDependencies) {
+    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
       this._removeModuleVersionPins();
     }
 
@@ -354,7 +353,6 @@ export default class SnackSession {
   setSdkVersion = (sdkVersion: SDKVersion): void => {
     if (this.sdkVersion !== sdkVersion) {
       if (
-        this.enableNewDependencies &&
         sdkSupportsFeature(sdkVersion, 'PROJECT_DEPENDENCIES') &&
         !this.supportsFeature('PROJECT_DEPENDENCIES')
       ) {
@@ -979,7 +977,7 @@ export default class SnackSession {
   };
 
   _handleFindDependenciesAsync = async () => {
-    if (this.enableNewDependencies && this.supportsFeature('PROJECT_DEPENDENCIES')) {
+    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
       return;
     }
 
@@ -1103,10 +1101,7 @@ export default class SnackSession {
       let code = file;
 
       // We need to insert peer dependencies in code when found
-      if (
-        peerDependencyResolutions.length &&
-        (!this.enableNewDependencies || !this.supportsFeature('PROJECT_DEPENDENCIES'))
-      ) {
+      if (peerDependencyResolutions.length && !this.supportsFeature('PROJECT_DEPENDENCIES')) {
         const ast = parse(code, { parser });
 
         this._log(`Adding imports for peer dependencies: ${JSON.stringify(peerDependencies)}`);
@@ -1124,7 +1119,7 @@ export default class SnackSession {
       // TODO: this system will not remove old dependencies that are no longer needed!
       Object.assign(this.dependencies, dependencies);
 
-      if (!this.enableNewDependencies || !this.supportsFeature('PROJECT_DEPENDENCIES')) {
+      if (!this.supportsFeature('PROJECT_DEPENDENCIES')) {
         this._log('Writing module versions');
         code = writeModuleVersions(code, dependencies);
       }
