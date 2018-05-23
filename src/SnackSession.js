@@ -18,7 +18,6 @@ import { parse, print } from 'recast';
 import * as babylon from 'babylon';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
-import fetch from 'node-fetch';
 
 import * as DevSession from './utils/DevSession';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
