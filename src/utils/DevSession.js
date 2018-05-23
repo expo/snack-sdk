@@ -12,6 +12,7 @@ type SessionOptions = {|
   sdkVersion: SDKVersion,
   channel: string,
   host: string,
+  apiUrl: string,
   user: { idToken?: ?string, sessionSecret?: ?string },
   deviceId?: ?string,
 |};
@@ -37,18 +38,17 @@ export async function sendKeepAliveAsync({
   sdkVersion,
   channel,
   host,
+  apiUrl,
   user,
   deviceId,
 }: SessionOptions): Promise<void> {
-  // TODO(brentvatne) if the user has configured device ids, then notify for those too
-  if (!user) {
+  if (!user && !deviceId) {
     return;
   }
 
   let url = constructExperienceURL({ snackId, sdkVersion, channel, host });
 
-  let apiServer = process.env.API_SERVER_URL || 'https://expo.io';
-  let apiEndpoint = `${apiServer}/--/api/v2/development-sessions/notify-alive`;
+  let apiEndpoint = `${apiUrl}/--/api/v2/development-sessions/notify-alive`;
 
   let displayName = name || 'Unnamed Snack';
 

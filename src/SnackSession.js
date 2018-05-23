@@ -152,11 +152,11 @@ export default class SnackSession {
     }
     this.user = options.user || {};
     this.user = {
-      ...this.user,
       ...{
         idToken: options.authorizationToken,
         sessionSecret: options.sessionSecret,
       },
+      ...this.user,
     };
     this.deviceId = options.deviceId;
 
@@ -270,6 +270,7 @@ export default class SnackSession {
       sdkVersion: this.sdkVersion,
       channel: this.channel,
       host: this.host,
+      apiUrl: this.expoApiUrl,
       user: this.user,
       deviceId: this.deviceId,
     });
