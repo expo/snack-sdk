@@ -45,6 +45,7 @@ async function startDefaultSessionAsync(args = {}) {
   let session = new SnackSession({
     files: INITIAL_CODE,
     sessionId: SESSION_ID,
+    disableDevSession: true,
     ...args,
   });
   await session.startAsync();
@@ -80,6 +81,7 @@ describe('when a sessionId is specified', () => {
     let session = new SnackSession({
       files: INITIAL_CODE,
       sessionId: SESSION_ID,
+      disableDevSession: true,
     });
     await session.startAsync();
     expect(session.pubnub.subscribe.mock.calls[0][0]).toEqual({
@@ -93,6 +95,7 @@ describe('when a sessionId is specified', () => {
     new SnackSession({
       files: INITIAL_CODE,
       sessionId: '123',
+      disableDevSession: true,
     });
   }
   it('errors if sessionId is too short', async () => {
@@ -102,6 +105,7 @@ describe('when a sessionId is specified', () => {
   it('generates a sessionId if none is provided', async () => {
     let session = new SnackSession({
       files: INITIAL_CODE,
+      disableDevSession: true,
     });
     expect(session.channel).toBeDefined();
   });
@@ -112,6 +116,7 @@ describe('getUrlAsync', () => {
     let session = new SnackSession({
       files: INITIAL_CODE,
       sessionId: SESSION_ID,
+      disableDevSession: true,
     });
     await session.startAsync();
     let url = await session.getUrlAsync();
@@ -123,6 +128,7 @@ describe('getUrlAsync', () => {
       files: INITIAL_CODE,
       sessionId: SESSION_ID,
       snackId: SNACK_ID,
+      disableDevSession: true,
     });
     await session.startAsync();
     let url = await session.getUrlAsync();
@@ -134,6 +140,7 @@ describe('getUrlAsync', () => {
       files: INITIAL_CODE,
       sessionId: SESSION_ID,
       sdkVersion: '25.0.0',
+      disableDevSession: true,
     });
     await session.startAsync();
     let url = await session.getUrlAsync();
@@ -145,6 +152,7 @@ describe('getUrlAsync', () => {
       files: INITIAL_CODE,
       sessionId: SESSION_ID,
       host: 'expo.io',
+      disableDevSession: true,
     });
     await session.startAsync();
     let url = await session.getUrlAsync();

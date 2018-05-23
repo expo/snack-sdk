@@ -120,17 +120,18 @@ export default class SnackSession {
   expoApiUrl: string;
   snackagerUrl: string;
   snackagerCloudfrontUrl: string;
-  authorizationToken: ?string;
-  sessionSecret: ?string;
+  authorizationToken: ?string; // to user
+  sessionSecret: ?string; // to user
   loadingMessage: ?string;
-  enableNewDependencies: boolean;
-  user: UserT;
-  deviceId: ?string;
+  user: UserT; // dev
+  deviceId: ?string; // dev
+  disableDevSession: boolean;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
     // TODO: check to make sure code was passed in
 
+    this.disableDevSession = options.disableDevSession || false;
     this.isResolving = false;
 
     this.files = options.files;
@@ -263,6 +264,9 @@ export default class SnackSession {
   };
 
   _startDevSessionAsync = (): Promise<void> => {
+    if (this.disableDevSession) {
+      return new Promise(() => {});
+    }
     return DevSession.startSessionAsync({
       name: this.name,
       snackId: this.snackId,
