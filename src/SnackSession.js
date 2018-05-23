@@ -140,7 +140,7 @@ export default class SnackSession {
     this.sdkVersion = options.sdkVersion || defaultSDKVersion;
     this.isVerbose = !!options.verbose;
     this.channel = options.sessionId || shortid.generate();
-    this.host = options.host || 'snack.expo.io';
+    this.host = options.host || 'expo.io';
     this.expoApiUrl = 'https://expo.io';
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
