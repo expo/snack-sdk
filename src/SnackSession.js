@@ -771,31 +771,23 @@ export default class SnackSession {
 
       const metadata = this._getAnalyticsMetadata();
       let message;
-      if (this.supportsFeature('MULTIPLE_FILES')) {
-        await this._handleUploadCodeAsync();
-        message = {
-          type: 'CODE',
-          diff: cloneDeep(this.diff),
-          s3url: cloneDeep(this.s3url),
-          dependencies: this.dependencies,
-          metadata,
-        };
-        if (!this.supportsFeature('PROJECT_DEPENDENCIES')) {
-          if (message.diff.hasOwnProperty('App.js')) {
-            message.diff['app.js'] = message.diff['App.js'];
-            delete message.diff['App.js'];
-          }
-          if (message.s3url.hasOwnProperty('App.js')) {
-            message.s3url['app.js'] = message.s3url['App.js'];
-            delete message.s3url['App.js'];
-          }
+      await this._handleUploadCodeAsync();
+      message = {
+        type: 'CODE',
+        diff: cloneDeep(this.diff),
+        s3url: cloneDeep(this.s3url),
+        dependencies: this.dependencies,
+        metadata,
+      };
+      if (!this.supportsFeature('PROJECT_DEPENDENCIES')) {
+        if (message.diff.hasOwnProperty('App.js')) {
+          message.diff['app.js'] = message.diff['App.js'];
+          delete message.diff['App.js'];
         }
-      } else {
-        message = {
-          type: 'CODE',
-          code: this.files['App.js'].contents,
-          metadata,
-        };
+        if (message.s3url.hasOwnProperty('App.js')) {
+          message.s3url['app.js'] = message.s3url['App.js'];
+          delete message.s3url['App.js'];
+        }
       }
 
       this.pubnub.publish({ channel: this.channel, message }, (status, response) => {

@@ -161,23 +161,6 @@ describe('getUrlAsync', () => {
 });
 
 describe('sendCodeAsync', () => {
-  it('sends the correct message to the device', async () => {
-    startMockingDate();
-    let session = await startDefaultSessionAsync();
-    await session.sendCodeAsync(NEW_CODE_MF_STYLE);
-    setMockDate(1000);
-    stopMockingDate();
-
-    await timeout(50);
-    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
-      channel: SESSION_ID,
-      message: {
-        type: 'CODE',
-        code: NEW_CODE,
-      },
-    });
-  });
-
   it('sends the correct message to the device when using diffs', async () => {
     startMockingDate();
     let session = await startDefaultSessionAsync({ sdkVersion: '21.0.0' });
