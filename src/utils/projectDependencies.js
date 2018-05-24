@@ -5,6 +5,8 @@ import { sdkSupportsFeature } from '../configs/sdkVersions';
 import type { SDKVersion } from '../configs/sdkVersions';
 import type { ExpoDependencyV1, ExpoDependencyV2 } from '../types';
 
+export { findModuleDependencies } from './moduleUtils';
+
 export const standardizeDependencies = (dependencies: ExpoDependencyV2, sdkVersion: SDKVersion) => {
   return convertDependencyFormat(
     dependencies,
@@ -42,7 +44,7 @@ const _convertDependenciesV1toV2 = dependencies =>
     if (version.resolved) {
       (result: Object).resolved = version.resolved;
     }
-    return result
+    return result;
   });
 
 const _convertDependenciesV2toV1 = dependencies => mapValues(dependencies, dep => dep.version);
