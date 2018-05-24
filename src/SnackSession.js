@@ -562,6 +562,12 @@ export default class SnackSession {
     return sdkSupportsFeature(this.sdkVersion, feature);
   };
 
+  /**
+   * Adds a given module, along with any required peer dependencies, to the current project
+   * Reports errors to any registered DependendencyErrorListeners
+   * @returns {Promise<any>}
+   * @function
+   */
   addModuleAsync = async (name: string, version?: string): Promise<any> => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
       const install = async () => {

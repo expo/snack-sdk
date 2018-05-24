@@ -85,3 +85,10 @@ Returns **[object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 Uploads the current code to Expo's servers and return a url that points to that version of the code.
 
 Returns **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;[object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)>** A promise that contains an object with a `url` field when fulfilled.
+
+### addModuleAsync
+
+Adds a given module, along with any required peer dependencies, to the current project
+Reports errors to any registered DependendencyErrorListeners
+
+Returns **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;any>** 

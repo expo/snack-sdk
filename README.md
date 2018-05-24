@@ -1,8 +1,11 @@
 # Snack SDK
-The Expo Snack SDK. Use this to create a custom web interface for https://snack.expo.io/.
+The Expo Snack SDK. Use this to create a custom web interface for https://snack.expo.io/.  For brevity, these docs assume you are targeting the most recent version of Expo SDK
 
-If you have problems with the code in this repository, please file issues & bug reports
+Have a problem with the code in this repository? Please file issues & bug reports
 at https://github.com/expo/expo. Thanks!
+
+Interested in integrating the Snack SDK into your project?
+Please email `support@expo.io` for asistance and to receive updates about any upgrades to the SDK
 
 ## Documentation
 
@@ -30,16 +33,27 @@ await session.startAsync();
 
 `sessionId` can be specified if you want a consistent url. This is a global namespace so make sure to use a UUID or scope it somehow if you use this.
 
-### Getting the URL for the mobile client
+### Connecting to your user's phone
+
+#### Getting the URL for the mobile client
 ```javascript
 let url = await session.getUrlAsync();
 ```
 This url will open the current Snack Session in the Expo client when opened on a phone. You can create a QR code from this link or send it to the phone in another way. See `example/` for how to turn this into a QR code.
 
+
+#### Recently in Development
+The Expo App includes an ID displayed at the bottom of the Projects tab.  Once this ID has been reported to the session, your project will appear in the "Recently in Development" section on the Projects tab for as long as the session remains active.
+
+Example:
+```javascript
+session.setDeviceId('XXXX-XXXX')
+```
+
 ### Updating the code
 ```javascript
 const files = {
-	'app.js': { contents: 'code here, this is entry point', type: 'CODE'},
+	'App.js': { contents: 'code here, this is entry point', type: 'CODE'},
 	'folder/file.js': { contents: 'this file is in /folder', type: 'CODE'},
 	'image.png': { content: 'remote location of asset', type: 'ASSET'},
 }
@@ -58,17 +72,48 @@ const remoteAddressOfAssetFile = await session.uploadAssetAsync(file);
 ```
 where file is a Javascript `File` object.
 
-### Arbitary NPM Modules
+### Dependencies
 
-When using Expo SDK 19 and above, you'll be able to use arbitary NPM modules with your app. Simply `import` or `require` them just like you will on desktop and we'll handle the rest (installing the modules and bundling it with project).
-
-SnackSession will append a comment to each line inticating the version that will be used, or an error message if the requested import could not be found.  You are encouraged to make this information available to your users in the interface.
+When using Exp SDK 25 and above, you'll be able to specify arbitrary NPM modules to use with your app.
 
 Example:
+```
+await session.addDependencies({"lodash": "4.17.10"}); // add a specific version
+await session.addDependencies({"lodash": "*"});       // or resolve to the most recent
+```
 
+To detect all dependencies needed to evaluate a file,
+
+Example:
 ```
-import lodash from 'lodash';
+import { dependencyUtils } from 'snack-sdk';
+
+let dependencies = Object.keys(dependencyUtils.findModuleDependencies('import lodash from "lodash";'));
+// ['lodash']
 ```
+
+#### Differences between dependencies in Snack and npm
+
+When developing a project on your local file system, you are probably used to:
+- Adding the dependency you want to you package.json
+- Running `npm install` which will copy the published package to your local filesystem
+- Importing or requiring any files included with that package into your project
+- Trusting your bundler to remove any unneeded code before publishing your project
+- Evaluating the project, along with any code from referenced dependencies, on a device
+
+which means that once we add lodash to our dependencies these are the same
+`import zip from 'lodash/zip';` 
+`import { zip } from 'lodash';`
+
+With Snack, we have prioritized taking an arbitrary dependency and have it available in the running experience as quickly as possible. To achieve that, only the parts of the package that are exported in the module's main entry point are available.  Tthe process looks like:
+- Adding the dependency to snack's : `session.addDependency({'my-package': 'version'})`
+- Bundling and minimizing the dependency
+- Evaluating the project code, along side any referenced dependencies
+
+which means that 
+`import zip from 'lodash/zip';` 
+is not available once you import `lodash` You will need to import 'lodash/zip' to a new package, which will give you a package identical to `lodash-zip`
+
 
 ### Saving the code to Expo's servers
 ```javascript
@@ -194,4 +239,4 @@ Please read the Flow types above for all possible fields returned in these liste
 ```javascript
 await session.stopAsync();
 ```
-This will shut down the PunNub connection.
+This will shut down the PubNub connection.

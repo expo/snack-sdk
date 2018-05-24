@@ -4,7 +4,6 @@
 
 import type { SDKVersion } from './configs/sdkVersions';
 
-// TODO: unify with snack model
 type requiredSnackFileAttributes = {
   contents: string,
   type: 'ASSET' | 'CODE',
