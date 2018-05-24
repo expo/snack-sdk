@@ -18,6 +18,9 @@ type SessionOptions = {|
 |};
 
 export async function startSessionAsync(options: SessionOptions): Promise<void> {
+  if (!options.deviceId && !options.user.idToken && !options.user.sessionSecret) {
+    return new Promise(() => {});
+  }
   stopSession();
 
   updateLoop = setInterval(() => {
