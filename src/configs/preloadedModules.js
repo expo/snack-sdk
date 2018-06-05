@@ -321,5 +321,5 @@ export default {
     'three',
     'react-native-vector-icons',
   ],
-  '27.0.0': ['react-native-vector-icons', '@expo/vector-icons'],
+  '27.0.0': ['react-native-vector-icons', '@expo/vector-icons', 'react-native-gesture-handler'],
 };
