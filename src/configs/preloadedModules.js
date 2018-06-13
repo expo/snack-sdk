@@ -322,4 +322,10 @@ export default {
     'react-native-vector-icons',
   ],
   '27.0.0': ['react-native-vector-icons', '@expo/vector-icons', 'react-native-gesture-handler'],
+  '28.0.0': [
+    'react-native-vector-icons',
+    '@expo/vector-icons',
+    'react-native-gesture-handler',
+    'react-native-reanimated',
+  ],
 };
