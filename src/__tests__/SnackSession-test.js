@@ -447,7 +447,7 @@ describe('saveAsync', () => {
       method: 'POST',
       body: `{"manifest":{"sdkVersion":"${defaultSDKVersion}","name":"testname1","description":"testdescription1","dependencies":{}},"code":${JSON.stringify(
         INITIAL_CODE
-      )},"dependencies":null}`,
+      )},"dependencies":{}}`,
       headers: {
         'Content-Type': 'application/json',
       },
