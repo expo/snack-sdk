@@ -17,6 +17,7 @@ import compact from 'lodash/compact';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
 import semver from 'semver';
+import parsePackageName from 'parse-package-name';
 import validate from 'validate-npm-package-name';
 
 import * as DevSession from './utils/DevSession';
@@ -565,23 +566,15 @@ export default class SnackSession {
   /**
    * Adds a given module, along with any required peer dependencies, to the current project
    * Reports errors to any registered DependendencyErrorListeners
-   * @returns {Promise<any>}
+   * @returns {Promise<void>}
    * @function
    */
-  addModuleAsync = async (name: string, version?: string): Promise<any> => {
+  addModuleAsync = async (name: string, version?: string): Promise<void> => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
       const install = async () => {
         try {
-          this.isResolving = true;
-          this.loadingMessage = `Resolving module: ${version ? `${name}@${version}` : name}`;
-          this._sendLoadingEvent();
-          this._sendStateEvent();
-
-          return await this._addModuleAsync(name, version);
+          this.dependencies = await this._addModuleAsync(name, version, this.dependencies);
         } finally {
-          this.isResolving = false;
-          this.loadingMessage = '';
-          this._sendLoadingEvent();
           this._sendStateEvent();
           this._publish();
         }
@@ -591,7 +584,7 @@ export default class SnackSession {
     }
   };
 
-  removeModuleAsync = async (name: string) => {
+  removeModuleAsync = async (name: string): Promise<void> => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
       this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
       this._sendStateEvent();
@@ -599,8 +592,51 @@ export default class SnackSession {
     }
   };
 
+  /**
+   * Sync list of dependencies and add new peer dependencies to the current project
+   * Reports errors to any registered DependendencyErrorListeners
+   * @returns {Promise<void>}
+   * @function
+   */
+  syncDependenciesAsync = async (
+    modules: { [name: string]: ?string },
+    onError: (name: string, e: Error) => mixed
+  ): Promise<void> => {
+    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
+      const sync = async () => {
+        let dependencies = pickBy(this.dependencies, (value, name: string) =>
+          // Only keep dependencies in the modules list
+          modules.hasOwnProperty(name)
+        );
+
+        // Install any new dependencies in series
+        for (const name of Object.keys(modules)) {
+          try {
+            dependencies = await this._addModuleAsync(name, modules[name], dependencies);
+          } catch (e) {
+            onError(name, e);
+          }
+        }
+
+        // Don't update state if nothing changed
+        if (!isEqual(dependencies, this.dependencies)) {
+          // Update dependencies list
+          this.dependencies = dependencies;
+
+          // Notify listeners
+          this._sendStateEvent();
+          this._publish();
+        }
+      };
+
+      // Queue multiple syncs
+      return (this._lastModuleSync = this._lastModuleSync.then(sync, sync));
+    }
+  };
+
   // Private methods and properties
-  _lastInstall: Promise<any> = Promise.resolve();
+  _lastInstall: Promise<void> = Promise.resolve();
+  _lastModuleSync: Promise<void> = Promise.resolve();
 
   _sendErrorEvent = (errors: Array<ExpoError>): void => {
     this.errorListeners.forEach(listener => listener(errors));
@@ -905,9 +941,9 @@ export default class SnackSession {
       count++;
 
       this._log(
-        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${
-          version ? `@${version}` : ''
-        }?platforms=ios,android`
+        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version
+          ? `@${version}`
+          : ''}?platforms=ios,android`
       );
       const res = await fetch(
         `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
@@ -930,21 +966,20 @@ export default class SnackSession {
   };
 
   _dependencyPromises: { [id: string]: Promise<ExpoDependencyResponse> } = {};
+  
   _maybeFetchDependencyAsync = async (
     name: string,
     version: string
   ): Promise<ExpoDependencyResponse> => {
     const id = `${name}-${version}`;
+    const details = parsePackageName(name);
+    const isNameValid = validate(details.name).validForOldPackages;
+    const isVersionValid = version && version !== 'latest' ? semver.validRange(version) : true;
 
-    const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
-    const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
-
-    const validPackage = validate(fullName).validForOldPackages;
-    const validVersion = version && version !== 'latest' ? semver.validRange(version) : true;
-    if (!validPackage || !validVersion) {
-      const validationError = !validPackage
-        ? new Error(`${fullName} is not a valid package`)
-        : new Error(`Invalid version for ${fullName}@${version}`);
+    if (!isNameValid || !isVersionValid) {
+      const validationError = !isNameValid
+        ? new Error(`${details.name} is not a valid package`)
+        : new Error(`Invalid version for ${details.name}@${version}`);
       return Promise.reject(validationError);
     }
 
@@ -1148,34 +1183,41 @@ export default class SnackSession {
     });
   };
 
-  _addModuleAsync = async (name: string, version?: string) => {
+  _addModuleAsync = async (name: string, version: ?string, previous: ExpoDependencyV2) => {
     if (isModulePreloaded(name, this.sdkVersion)) {
       throw new Error(`Module is already preloaded: ${name}`);
     }
 
     // Check if the dependency is already installed
-    if (
-      this.dependencies[name] &&
-      (this.dependencies[name].version === version || this.dependencies[name].resolved === version)
-    ) {
-      return;
+    const dependency = previous[name];
+
+    if (dependency && (dependency.version === version || dependency.resolved === version)) {
+      return previous;
     }
 
-    this._log(`Resolving module: ${name}@${version || 'latest'}`);
+    const loadingMessage = `Resolving module: ${version ? `${name}@${version}` : name}`;
+
+    this.isResolving = true;
+    this.loadingMessage = loadingMessage;
+    this._sendLoadingEvent();
+    this._sendStateEvent();
+
+    this._log(loadingMessage);
 
     try {
       const result = await this._maybeFetchDependencyAsync(name, version || 'latest');
+      const peerDependencies = result.dependencies;
 
-      this.dependencies = {
-        ...this.dependencies,
+      let dependencies = {
+        ...previous,
         [result.name]: {
           version: version || result.version,
           resolved: result.version,
-          peerDependencies: result.dependencies
-            ? Object.keys(result.dependencies).reduce((acc, curr) => {
+          peerDependencies: peerDependencies
+            ? Object.keys(peerDependencies).reduce((acc, curr) => {
                 acc[curr] = {
                   // $FlowFixMe We want the whole try block to fail if result was rejected
-                  version: result.dependencies[curr],
+                  version: peerDependencies[curr],
                 };
                 return acc;
               }, {})
@@ -1183,21 +1225,25 @@ export default class SnackSession {
         },
       };
 
-      this._sendStateEvent();
+      if (peerDependencies) {
+        this._log(`Resolving peer dependencies: ${JSON.stringify(peerDependencies)}`);
 
-      const { dependencies } = result;
+        for (const name of Object.keys(peerDependencies)) {
+          // Don't install peer dep if already installed
+          // We don't check for version as the version specified in top-level dep takes precedence
+          if (isModulePreloaded(name, this.sdkVersion) || dependencies[name]) {
+            continue;
+          }
 
-      if (dependencies) {
-        this._log(`Resolving peer dependencies: ${JSON.stringify(dependencies)}`);
-
-        await Promise.all(
-          Object.keys(dependencies)
-            // Don't install peer dep if already installed
-            // We don't check for version as the version specified in top-level dep takes precedence
-            .filter(name => !(isModulePreloaded(name, this.sdkVersion) || this.dependencies[name]))
-            .map(name => this._addModuleAsync(name, dependencies[name] || 'latest'))
-        );
+          dependencies = await this._addModuleAsync(
+            name,
+            peerDependencies[name] || 'latest',
+            dependencies
+          );
+        }
       }
+
+      return dependencies;
     } catch (e) {
       this._error(`Error resolving module: ${e.message}`);
 
@@ -1206,6 +1252,11 @@ export default class SnackSession {
       }
 
       throw e;
+    } finally {
+      this.isResolving = false;
+      this.loadingMessage = '';
+      this._sendLoadingEvent();
+      this._sendStateEvent();
     }
   };
 }
