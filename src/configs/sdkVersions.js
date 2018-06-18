@@ -4,6 +4,7 @@ import semver from 'semver';
 
 // minimum SDK versions that support snack features
 const minFeatureVersion = {
+  MULTIPLE_FILES: '21.0.0',
   PROJECT_DEPENDENCIES: '25.0.0',
 };
 
