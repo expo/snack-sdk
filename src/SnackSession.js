@@ -17,7 +17,6 @@ import compact from 'lodash/compact';
 import { parse, print } from 'recast';
 import * as babylon from 'babylon';
 import semver from 'semver';
-import parsePackageName from 'parse-package-name';
 import validate from 'validate-npm-package-name';
 
 import * as DevSession from './utils/DevSession';
@@ -941,9 +940,9 @@ export default class SnackSession {
       count++;
 
       this._log(
-        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version
-          ? `@${version}`
-          : ''}?platforms=ios,android`
+        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${
+          version ? `@${version}` : ''
+        }?platforms=ios,android`
       );
       const res = await fetch(
         `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
@@ -966,20 +965,21 @@ export default class SnackSession {
   };
 
   _dependencyPromises: { [id: string]: Promise<ExpoDependencyResponse> } = {};
-  
+
   _maybeFetchDependencyAsync = async (
     name: string,
     version: string
   ): Promise<ExpoDependencyResponse> => {
     const id = `${name}-${version}`;
-    const details = parsePackageName(name);
-    const isNameValid = validate(details.name).validForOldPackages;
-    const isVersionValid = version && version !== 'latest' ? semver.validRange(version) : true;
+    const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
+    const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
-    if (!isNameValid || !isVersionValid) {
-      const validationError = !isNameValid
-        ? new Error(`${details.name} is not a valid package`)
-        : new Error(`Invalid version for ${details.name}@${version}`);
+    const validPackage = validate(fullName).validForOldPackages;
+    const validVersion = version && version !== 'latest' ? semver.validRange(version) : true;
+    if (!validPackage || !validVersion) {
+      const validationError = !validPackage
+        ? new Error(`${fullName} is not a valid package`)
+        : new Error(`Invalid version for ${fullName}@${version}`);
       return Promise.reject(validationError);
     }
 
