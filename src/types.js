@@ -133,3 +133,8 @@ export type ExpoDependencyResponse = {
   dependencies?: { [key: string]: string },
   error?: Error,
 };
+
+export type ExpoStatusResponse = {
+  previewLocation: string,
+  status: boolean
+}

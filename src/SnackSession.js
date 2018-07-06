@@ -57,6 +57,7 @@ import type {
   ExpoDependencyErrorListener,
   ExpoDependencyV2,
   ExpoDependencyResponse,
+  ExpoStatusResponse,
 } from './types';
 
 type InitialState = {
@@ -198,6 +199,8 @@ export default class SnackSession {
             break;
           case 'RESEND_CODE':
             this._handleResendCodeMessage();
+          case 'STATUS_REPORT':
+            this._handleStatusReport(message);
         }
       },
       presence: ({ action, uuid }) => {
@@ -526,6 +529,8 @@ export default class SnackSession {
           fullName = `@snack/${data.id}`;
         }
 
+        this._requestStatus();
+        this.snackId = data.id;
         return {
           id: data.id,
           url: `https://expo.io/${fullName}`,
@@ -539,6 +544,20 @@ export default class SnackSession {
       console.error(e);
       throw e;
     }
+  };
+
+  _requestStatus = () => {
+    if (!this.pubnub) {
+      return;
+    }
+    const message = { type: 'REQUEST_STATUS' };
+    this.pubnub.publish({ channel: this.channel, message }, (status, response) => {
+      if (status.error) {
+        this._error(`Error requesting status: ${status.error}`);
+      } else {
+        this._log('Requested Status');
+      }
+    });
   };
 
   getState = () => {
@@ -788,6 +807,39 @@ export default class SnackSession {
 
   _handleResendCodeMessage = () => {
     this._publishNotDebouncedAsync();
+  };
+
+  _handleStatusReport = async (message: ExpoStatusResponse) => {
+    const url = `${this.expoApiUrl}/--/api/v2/snack/updateMetadata`;
+    const { previewLocation, status } = message;
+    const payload = {
+      id: this.snackId,
+      previewLocation,
+      status,
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      if (data.id) {
+        return {
+          id: data.id,
+        };
+      } else {
+        throw new Error(
+          (data.errors && data.errors[0] && data.errors[0].message) || 'Failed to save code'
+        );
+      }
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
   };
 
   _handleJoinMessage = (device: ExpoDevice) => {
