@@ -1,19 +1,16 @@
 /* @flow */
 
-import preloadedModules from '../configs/preloadedModules';
+import { haste, dependencies } from '../configs/preloadedModules';
+import type { SDKVersion } from '../configs/sdkVersions';
 
-export default function isModulePreloaded(name: string, sdkVersion?: string) {
-  if (preloadedModules['all'].includes(name)) {
+export default function isModulePreloaded(name: string, sdkVersion: SDKVersion) {
+  if (haste.includes(name)) {
     return true;
   }
 
-  // perform prefix search on sdk specific preloaded module
-  // TODO(tc): more reasonable handling of prefixes & version specific changes
-  if (!sdkVersion || !(sdkVersion in preloadedModules)) {
+  if (!dependencies[sdkVersion]) {
     return false;
   }
 
-  const modules = preloadedModules[sdkVersion];
-  const result = modules.filter(key => name.startsWith(key));
-  return !!result.length;
+  return name in dependencies[sdkVersion];
 }

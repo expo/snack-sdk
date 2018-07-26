@@ -16,6 +16,12 @@ module.exports = {
   get SnackTypes() {
     return require('./types');
   },
+  get preloadedModules() {
+    return require('./configs/preloadedModules');
+  },
+  get babylonConfig() {
+    return require('./configs/babylon').default;
+  },
   get dependencyUtils() {
     return require('./utils/projectDependencies');
   },
