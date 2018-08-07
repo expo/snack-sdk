@@ -2,9 +2,5 @@
   "testEnvironment": "node",
   "testPathDirs": [
     "src"
-  ],
-  "moduleFileExtensions": [
-    "js",
-    "json"
   ]
 }

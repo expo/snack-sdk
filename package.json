@@ -4,17 +4,18 @@
   "description": "The Expo Snack SDK",
   "main": "build/snack.js",
   "repository": "expo/snack-sdk",
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "scripts": {
     "start": "yarn run build && yarn run watch",
     "build": "cross-env NODE_ENV=production gulp clean && gulp build",
     "build-dev": "cross-env NODE_ENV=production gulp build",
     "prepare": "yarn build",
     "watch": "gulp watch",
-    "test": "jest --config jest/test-config.json --coverage",
+    "test": "cross-env NODE_ENV=test jest --config jest/test-config.json --coverage",
     "flow-typed": "flow-typed install",
-    "docs":
-      "documentation readme --readme-file API.md --section \"Snack SDK API\" src/SnackSession.js"
+    "docs": "documentation readme --readme-file API.md --section \"Snack SDK API\" src/SnackSession.js"
   },
   "author": "support@getexponent.com",
   "license": "MIT",
@@ -32,13 +33,17 @@
     "validate-npm-package-name": "^3.0.0"
   },
   "powertools": {
-    "group": ["snack"]
+    "group": [
+      "snack"
+    ]
   },
   "devDependencies": {
     "babel-cli": "^6.14.0",
     "babel-eslint": "^7.1.0",
     "babel-jest": "^18.0.0",
+    "babel-plugin-dynamic-import-node": "^2.0.0",
     "babel-plugin-module-resolver": "^2.4.0",
+    "babel-plugin-syntax-dynamic-import": "^6.18.0",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-flow-strip-types": "^6.21.0",
     "babel-plugin-transform-inline-imports-commonjs": "^1.2.0",

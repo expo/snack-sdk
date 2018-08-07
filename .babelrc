@@ -7,6 +7,7 @@
     }]
   ],
   "plugins": [
+    "syntax-dynamic-import",
     "transform-flow-strip-types",
     ["module-resolver", {
       "alias": {
@@ -17,5 +18,12 @@
     "transform-object-rest-spread",
     "transform-runtime"
   ],
-  "sourceMaps": true,
+  "env": {
+    "test": {
+      "plugins": [
+        "dynamic-import-node"
+      ]
+    }
+  },
+  "sourceMaps": true
 }

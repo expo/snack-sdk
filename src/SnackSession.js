@@ -14,8 +14,6 @@ import pickBy from 'lodash/pickBy';
 import cloneDeep from 'lodash/cloneDeep';
 import difference from 'lodash/difference';
 import compact from 'lodash/compact';
-import { parse, print } from 'recast';
-import * as babylon from 'babylon';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
 
@@ -31,8 +29,6 @@ import {
   writeModuleVersions,
   removeModuleVersions,
 } from './utils/moduleUtils';
-import insertImport from './utils/insertImport';
-import config from './configs/babylon';
 
 let platform = null;
 // + and - are used as delimiters in the uri, ensure they do not appear in the channel itself
@@ -71,10 +67,6 @@ type InitialState = {
 type Module = {
   name: string,
   version?: ?string,
-};
-
-const parser = {
-  parse: (code: string) => babylon.parse(code, config),
 };
 
 const MIN_CHANNEL_LENGTH = 6;
@@ -992,9 +984,9 @@ export default class SnackSession {
       count++;
 
       this._log(
-        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${
-          version ? `@${version}` : ''
-        }?platforms=ios,android`
+        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version
+          ? `@${version}`
+          : ''}?platforms=ios,android`
       );
       const res = await fetch(
         `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
@@ -1190,18 +1182,18 @@ export default class SnackSession {
 
       // We need to insert peer dependencies in code when found
       if (peerDependencyResolutions.length && !this.supportsFeature('PROJECT_DEPENDENCIES')) {
-        const ast = parse(code, { parser });
-
         this._log(`Adding imports for peer dependencies: ${JSON.stringify(peerDependencies)}`);
-        peerDependencyResolutions.forEach(it =>
-          insertImport(ast, {
+
+        const { default: insertImports } = await import('./utils/insertImports');
+
+        code = insertImports(
+          code,
+          peerDependencyResolutions.map(it => ({
             // Insert an import statement for the module
             // This will skip the import if already present
             from: it.name,
-          })
+          }))
         );
-
-        code = print(ast).code;
       }
 
       // TODO: this system will not remove old dependencies that are no longer needed!
