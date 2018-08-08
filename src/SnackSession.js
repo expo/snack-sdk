@@ -324,6 +324,7 @@ export default class SnackSession {
         delete this.files[key];
       }
     }
+
     // and add or update the files in the provided code
     for (const key in files) {
       if (!this.files[key] || this.files[key] !== files[key]) {
@@ -336,6 +337,7 @@ export default class SnackSession {
         }
       }
     }
+
     this._publish();
     this._sendStateEvent();
   };
