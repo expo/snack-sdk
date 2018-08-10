@@ -1118,7 +1118,7 @@ export default class SnackSession {
       );
     } catch (e) {
       // Likely a parse error
-      this._error(`Couldn't find dependencies: ${e}`);
+      this._error(`Couldn't find dependencies: ${e.message}`);
       return null;
     }
 
@@ -1221,7 +1221,7 @@ export default class SnackSession {
       return code;
     } catch (e) {
       // TODO: Show user that there is an error getting dependencies
-      this._error(`Error in _findDependenciesOnceAsync: ${e}`);
+      this._error(`Error in _findDependenciesOnceAsync: ${e.message}`);
     } finally {
       this._sendStateEvent();
     }

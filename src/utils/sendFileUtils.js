@@ -29,7 +29,7 @@ const uploadCodeToS3 = async (code: string, api: string) => {
     const data = await response.json();
     return data.url;
   } catch (e) {
-    throw new Error('Unable to upload code to S3: ' + e);
+    throw new Error('Unable to upload code to S3: ' + e.message);
   }
 };
 
@@ -45,7 +45,7 @@ const uploadAssetToS3 = async (asset: string, api: string) => {
     const data = await response.json();
     return data.url;
   } catch (e) {
-    throw new Error('Unable to upload asset to S3: ' + e);
+    throw new Error('Unable to upload asset to S3: ' + e.message);
   }
 };
 
