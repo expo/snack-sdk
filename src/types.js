@@ -4,18 +4,18 @@
 
 import type { SDKVersion } from './configs/sdkVersions';
 
-type requiredSnackFileAttributes = {
+type RequiredSnackFileAttributes = {
   contents: string,
   type: 'ASSET' | 'CODE',
 };
 
 type ExpoRequiredSnackFiles = {
-  'app.js': requiredSnackFileAttributes,
+  'app.js': RequiredSnackFileAttributes,
 };
 
 export type ExpoSnackFiles = {
   ...$Exact<ExpoRequiredSnackFiles>,
-  ...{ [string]: requiredSnackFileAttributes },
+  ...{ [string]: RequiredSnackFileAttributes },
 };
 
 export type ExpoSnackSessionArguments = {

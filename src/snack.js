@@ -1,31 +1,13 @@
-/**
- * @flow
- */
+/* @flow */
 
-if (process.env.NODE_ENV !== 'production') {
-  // require('source-map-support').install();
-}
+import * as SDKVersions from './configs/sdkVersions';
+import * as preloadedModules from './configs/preloadedModules';
+import * as dependencyUtils from './utils/projectDependencies';
 
-module.exports = {
-  get SnackSession() {
-    return require('./SnackSession').default;
-  },
-  get SDKVersions() {
-    return require('./configs/sdkVersions');
-  },
-  get SnackTypes() {
-    return require('./types');
-  },
-  get preloadedModules() {
-    return require('./configs/preloadedModules');
-  },
-  get babylonConfig() {
-    return require('./configs/babylon').default;
-  },
-  get dependencyUtils() {
-    return require('./utils/projectDependencies');
-  },
-  get isModulePreloaded() {
-    return require('./utils/isModulePreloaded').default;
-  },
-};
+export { SDKVersions, preloadedModules, dependencyUtils };
+
+export { default as SnackSession } from './SnackSession';
+export { default as isModulePreloaded } from './utils/isModulePreloaded';
+
+export * from './types';
+export type { SDKVersion } from './configs/sdkVersions';
