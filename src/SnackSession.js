@@ -598,6 +598,7 @@ export default class SnackSession {
 
   removeModuleAsync = async (name: string): Promise<void> => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
+      /* $FlowFixMe */
       this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
       this._sendStateEvent();
       this._publish();
@@ -616,6 +617,7 @@ export default class SnackSession {
   ): Promise<void> => {
     if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
       const sync = async () => {
+        /* $FlowFixMe */
         let dependencies = pickBy(this.dependencies, (value, name: string) =>
           // Only keep dependencies in the modules list
           modules.hasOwnProperty(name)
@@ -1102,6 +1104,7 @@ export default class SnackSession {
       // Find all module imports in the code
       // This will skip local imports and reserved ones
       modules = pickBy(
+        /* $FlowFixMe */
         findModuleDependencies(file),
         (version: string, module: string) =>
           !module.startsWith('.') && !isModulePreloaded(module, this.sdkVersion)

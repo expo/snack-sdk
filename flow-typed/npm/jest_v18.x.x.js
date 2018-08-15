@@ -1,5 +1,5 @@
-// flow-typed signature: 8f4b2924571a9924b1661d2580c94507
-// flow-typed version: b43dff3e0e/jest_v18.x.x/flow_>=v0.16.x
+// flow-typed signature: 62a36019b5fd467fa5164d2aeac66208
+// flow-typed version: da30fe6876/jest_v18.x.x/flow_>=v0.25.x
 
 type JestMockFn = {
   (...args: Array<any>): any,
@@ -17,7 +17,7 @@ type JestMockFn = {
      * An array that contains all the object instances that have been
      * instantiated from this mock function.
      */
-    instances: mixed,
+    instances: mixed
   },
   /**
    * Resets all information stored in the mockFn.mock.calls and
@@ -54,14 +54,14 @@ type JestMockFn = {
   /**
    * Sugar for only returning a value once inside your mock
    */
-  mockReturnValueOnce(value: any): JestMockFn,
+  mockReturnValueOnce(value: any): JestMockFn
 };
 
 type JestAsymmetricEqualityType = {
   /**
    * A custom Jasmine equality tester
    */
-  asymmetricMatch(value: mixed): boolean,
+  asymmetricMatch(value: mixed): boolean
 };
 
 type JestCallsType = {
@@ -71,19 +71,19 @@ type JestCallsType = {
   count(): number,
   first(): mixed,
   mostRecent(): mixed,
-  reset(): void,
+  reset(): void
 };
 
 type JestClockType = {
   install(): void,
   mockDate(date: Date): void,
   tick(milliseconds?: number): void,
-  uninstall(): void,
+  uninstall(): void
 };
 
 type JestMatcherResult = {
   message?: string | (() => string),
-  pass: boolean,
+  pass: boolean
 };
 
 type JestMatcher = (actual: any, expected: any) => JestMatcherResult;
@@ -224,7 +224,7 @@ type JestExpectType = {
    * Use .toThrowErrorMatchingSnapshot to test that a function throws a error
    * matching the most recent snapshot when it is called.
    */
-  toThrowErrorMatchingSnapshot(): void,
+  toThrowErrorMatchingSnapshot(): void
 };
 
 type JestObjectType = {
@@ -345,11 +345,11 @@ type JestObjectType = {
   /**
    * Instructs Jest to use the real versions of the standard timer functions.
    */
-  useRealTimers(): JestObjectType,
+  useRealTimers(): JestObjectType
 };
 
 type JestSpyType = {
-  calls: JestCallsType,
+  calls: JestCallsType
 };
 
 /** Runs this function after every test inside this context */
@@ -392,7 +392,7 @@ declare var it: {
    * @param {string} Name of Test
    * @param {Function} Test
    */
-  concurrent(name: string, fn?: Function): ?Promise<void>,
+  concurrent(name: string, fn?: Function): ?Promise<void>
 };
 declare function fit(name: string, fn: Function): ?Promise<void>;
 /** An individual test unit */
@@ -417,7 +417,7 @@ declare var expect: {
   anything(): void,
   arrayContaining(value: Array<mixed>): void,
   objectContaining(value: Object): void,
-  stringMatching(value: string | RegExp): void,
+  stringMatching(value: string | RegExp): void
 };
 
 // TODO handle return type
@@ -428,7 +428,7 @@ declare function spyOn(value: mixed, method: string): Object;
 declare var jest: JestObjectType;
 
 /**
- * The global Jamine object, this is generally not exposed as the public API,
+ * The global Jasmine object, this is generally not exposed as the public API,
  * using features inside here could break in later versions of Jest.
  */
 declare var jasmine: {
@@ -443,5 +443,5 @@ declare var jasmine: {
     methodNames: Array<string>
   ): { [methodName: string]: JestSpyType },
   objectContaining(value: Object): void,
-  stringMatching(value: string): void,
+  stringMatching(value: string): void
 };
