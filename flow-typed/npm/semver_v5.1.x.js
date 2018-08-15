@@ -1,69 +1,69 @@
-// flow-typed signature: dc381ee55406f66b7272c6343db0834b
-// flow-typed version: da30fe6876/semver_v5.1.x/flow_>=v0.25.x
+// flow-typed signature: 1d1f54a0e3983f7bd1d91411d7e64f22
+// flow-typed version: 99dfe36842/semver_v5.1.x/flow_>=v0.20.x
 
-declare module "semver" {
+declare module 'semver' {
   declare type Release =
-    | "major"
-    | "premajor"
-    | "minor"
-    | "preminor"
-    | "patch"
-    | "prepatch"
-    | "prerelease";
+    | 'major'
+    | 'premajor'
+    | 'minor'
+    | 'preminor'
+    | 'patch'
+    | 'prepatch'
+    | 'prerelease';
 
   // The supported comparators are taken from the source here:
   // https://github.com/npm/node-semver/blob/8bd070b550db2646362c9883c8d008d32f66a234/semver.js#L623
   declare type Operator =
-    | "==="
-    | "!=="
-    | "=="
-    | "="
-    | "" // Not sure why you would want this, but whatever.
-    | "!="
-    | ">"
-    | ">="
-    | "<"
-    | "<=";
+    | '==='
+    | '!=='
+    | '=='
+    | '='
+    | '' // Not sure why you would want this, but whatever.
+    | '!='
+    | '>'
+    | '>='
+    | '<'
+    | '<=';
 
   declare class SemVer {
-    build: Array<string>;
-    loose: ?boolean;
-    major: number;
-    minor: number;
-    patch: number;
-    prerelease: Array<string | number>;
-    raw: string;
-    version: string;
+    build: Array<string>,
+    loose: ?boolean,
+    major: number,
+    minor: number,
+    patch: number,
+    prerelease: Array<string | number>,
+    raw: string,
+    version: string,
 
-    constructor(version: string | SemVer, loose?: boolean): SemVer;
-    compare(other: string | SemVer): -1 | 0 | 1;
-    compareMain(other: string | SemVer): -1 | 0 | 1;
-    comparePre(other: string | SemVer): -1 | 0 | 1;
-    format(): string;
-    inc(release: Release, identifier: string): this;
+    constructor(version: string | SemVer, loose?: boolean): SemVer,
+    compare(other: string | SemVer): -1 | 0 | 1,
+    compareMain(other: string | SemVer): -1 | 0 | 1,
+    comparePre(other: string | SemVer): -1 | 0 | 1,
+    format(): string,
+    inc(release: Release, identifier: string): this,
   }
 
   declare class Comparator {
-    loose?: boolean;
-    operator: Operator;
-    semver: SemVer;
-    value: string;
+    loose?: boolean,
+    operator: Operator,
+    semver: SemVer,
+    value: string,
 
-    constructor(comp: string | Comparator, loose?: boolean): Comparator;
-    parse(comp: string): void;
-    test(version: string): boolean;
+    constructor(comp: string | Comparator, loose?: boolean): Comparator,
+    parse(comp: string): void,
+    test(version: string): boolean,
   }
 
   declare class Range {
-    loose: ?boolean;
-    raw: string;
-    set: Array<Array<Comparator>>;
+    loose: ?boolean,
+    raw: string,
+    set: Array<Array<Comparator>>,
 
-    constructor(range: string | Range, loose?: boolean): Range;
-    format(): string;
-    parseRange(range: string): Array<Comparator>;
-    test(version: string): boolean;
-    toString(): string;
+    constructor(range: string | Range, loose?: boolean): Range,
+    format(): string,
+    parseRange(range: string): Array<Comparator>,
+    test(version: string): boolean,
+    toString(): string,
   }
 
   declare var SEMVER_SPEC_VERSION: string;
@@ -185,7 +185,7 @@ declare module "semver" {
   declare function outside(
     version: string | SemVer,
     range: string | Range,
-    hilo: ">" | "<",
+    hilo: '>' | '<',
     loose?: boolean
   ): boolean;
 

@@ -13,4 +13,4 @@ type ShortIdModule = {
 
 declare module 'shortid' {
   declare module.exports: ShortIdModule;
-};
+}
