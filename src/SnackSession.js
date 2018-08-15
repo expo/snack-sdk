@@ -1100,6 +1100,7 @@ export default class SnackSession {
 
   _findDependenciesOnceAsync = async (file: string): Promise<?string> => {
     let modules: { [string]: string };
+
     try {
       // Find all module imports in the code
       // This will skip local imports and reserved ones

@@ -1,17 +1,20 @@
 {
   "presets": [
     ["env", {
+      "modules": false,
       "targets": {
         "browsers": ["last 2 versions", "ie >= 10"]
       }
     }]
   ],
   "plugins": [
-    "dynamic-import-node",
+    "syntax-dynamic-import",
     "transform-flow-strip-types",
     "transform-class-properties",
     "transform-object-rest-spread",
+    "transform-runtime",
     ["transform-runtime", { "polyfill": false }]
   ],
-  "sourceMaps": true
+  "sourceMaps": true,
+  "babelrc": false
 }
