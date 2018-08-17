@@ -24,7 +24,9 @@ export default function constructExperienceURL({ sdkVersion, snackId, channel, h
   // and append a uuid to the url so that two different users starting a new snack
   // have different ids.
   let result = snackId
-    ? `exp://${hostWithoutSubdomain}/@snack/${snackId}+${channel}`
+    ? snackId.startsWith('@')
+      ? `exp://${hostWithoutSubdomain}/${snackId}+${channel}`
+      : `exp://${hostWithoutSubdomain}/@snack/${snackId}+${channel}`
     : `exp://${hostWithoutSubdomain}/@snack/sdk.${sdkVersion}-${channel}`;
   return result;
 }
