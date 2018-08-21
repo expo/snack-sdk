@@ -315,7 +315,6 @@ export const haste = [
 
 export const dependencies = {
   '23.0.0': {
-    '@expo/vector-icons': '6.2.0',
     'expo': '23.0.0',
     'react-native-svg': 'expo/react-native-svg#5.5.1-exp.1',
     'react-native-vector-icons': 'expo/vector-icons#6.2.0',
@@ -324,7 +323,6 @@ export const dependencies = {
     'three': '0.87.1',
   },
   '24.0.0': {
-    '@expo/vector-icons': '6.2.0',
     'expo': '24.0.0',
     'react-native-svg': 'expo/react-native-svg#5.5.1-exp.1',
     'react-native-vector-icons': 'expo/vector-icons#6.2.0',
@@ -333,7 +331,6 @@ export const dependencies = {
     'three': '0.87.1',
   },
   '25.0.0': {
-    '@expo/vector-icons': '6.2.0',
     'expo': '25.0.0',
     'react-native-svg': 'expo/react-native-svg#5.5.1-exp.1',
     'react-native-vector-icons': 'expo/vector-icons#6.2.0',
@@ -342,7 +339,6 @@ export const dependencies = {
     'three': '0.89.0',
   },
   '26.0.0': {
-    '@expo/vector-icons': '6.3.1',
     'expo': '26.0.0',
     'react-native-svg': '6.2.2',
     'react-native-vector-icons': 'expo/vector-icons#6.3.1',
