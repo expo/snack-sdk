@@ -314,14 +314,6 @@ export const haste = [
 ];
 
 export const dependencies = {
-  '23.0.0': {
-    'expo': '23.0.0',
-    'react-native-svg': 'expo/react-native-svg#5.5.1-exp.1',
-    'react-native-vector-icons': 'expo/vector-icons#6.2.0',
-    'react-native': '0.50.0',
-    'react': '16.0.0',
-    'three': '0.87.1',
-  },
   '24.0.0': {
     'expo': '24.0.0',
     'react-native-svg': 'expo/react-native-svg#5.5.1-exp.1',
