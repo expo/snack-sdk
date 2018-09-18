@@ -373,6 +373,7 @@ export const dependencies = {
   '30.0.0': {
     '@expo/vector-icons': '6.3.1',
     expo: '30.0.0',
+    'react-native-screens': '1.0.0-alpha.5',
     'react-native-gesture-handler': '1.0.6',
     'react-native-reanimated': '1.0.0-alpha.6',
     'react-native-svg': '6.2.2',
