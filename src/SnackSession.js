@@ -474,7 +474,7 @@ export default class SnackSession {
    * @function
    */
 
-  saveAsync = async () => {
+  saveAsync = async (options?: { isDraft: boolean } = { isDraft: false }) => {
     const url = `${this.expoApiUrl}/--/api/v2/snack/save`;
     const manifest: {
       sdkVersion: string,
@@ -493,6 +493,7 @@ export default class SnackSession {
       manifest,
       code: this.files,
       dependencies: this.supportsFeature('PROJECT_DEPENDENCIES') ? this.dependencies : null,
+      isDraft: options.isDraft,
     };
 
     try {
