@@ -1021,6 +1021,11 @@ export default class SnackSession {
   ): Promise<ExpoDependencyResponse> => {
     const id = `${name}-${version}`;
     const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
+
+    if (!match) {
+      return Promise.reject(new Error(`Failed to parse the package name: '${name}'`))
+    }
+
     const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
 
     const validPackage = validate(fullName).validForOldPackages;
