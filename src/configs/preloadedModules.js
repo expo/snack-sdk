@@ -382,4 +382,15 @@ export const dependencies = {
     react: '16.3.1',
     three: '0.90.0',
   },
+  '31.0.0': {
+    '@expo/vector-icons': '6.3.1',
+    expo: '31.0.0',
+    'react-native-screens': '1.0.0-alpha.15',
+    'react-native-gesture-handler': '1.0.8',
+    'react-native-reanimated': '1.0.0-alpha.10',
+    'react-native-svg': '8.0.8',
+    'react-native-vector-icons': 'expo/vector-icons#8.0.0',
+    'react-native': '0.57.1',
+    react: '16.5.0',
+  },
 };
