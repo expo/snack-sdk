@@ -24,11 +24,6 @@ import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
 import { convertDependencyFormat } from './utils/projectDependencies';
-import {
-  findModuleDependencies,
-  writeModuleVersions,
-  removeModuleVersions,
-} from './utils/moduleUtils';
 
 let platform = null;
 // + and - are used as delimiters in the uri, ensure they do not appear in the channel itself
@@ -167,11 +162,6 @@ export default class SnackSession {
 
     if (this.channel.length < MIN_CHANNEL_LENGTH) {
       throw new Error('Please use a channel id with more entropy');
-    }
-
-    this._handleFindDependenciesAsync();
-    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
-      this._removeModuleVersionPins();
     }
 
     this.pubnub = new PubNub({
@@ -352,18 +342,10 @@ export default class SnackSession {
   // TODO: error when changing SDK to an unsupported version
   setSdkVersion = (sdkVersion: SDKVersion): void => {
     if (this.sdkVersion !== sdkVersion) {
-      if (
-        sdkSupportsFeature(sdkVersion, 'PROJECT_DEPENDENCIES') &&
-        !this.supportsFeature('PROJECT_DEPENDENCIES')
-      ) {
-        this._removeModuleVersionPins();
-      }
-
       this.sdkVersion = sdkVersion;
 
       this._sendStateEvent();
       this._updateDevSession();
-      this._handleFindDependenciesAsync();
     }
   };
 
@@ -492,7 +474,7 @@ export default class SnackSession {
     const payload = {
       manifest,
       code: this.files,
-      dependencies: this.supportsFeature('PROJECT_DEPENDENCIES') ? this.dependencies : null,
+      dependencies: this.dependencies,
       isDraft: options.isDraft,
     };
 
@@ -583,27 +565,23 @@ export default class SnackSession {
    * @function
    */
   addModuleAsync = async (name: string, version?: string): Promise<void> => {
-    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
-      const install = async () => {
-        try {
-          this.dependencies = await this._addModuleAsync(name, version, this.dependencies);
-        } finally {
-          this._sendStateEvent();
-          this._publish();
-        }
-      };
+    const install = async () => {
+      try {
+        this.dependencies = await this._addModuleAsync(name, version, this.dependencies);
+      } finally {
+        this._sendStateEvent();
+        this._publish();
+      }
+    };
 
-      return (this._lastInstall = this._lastInstall.then(install, install));
-    }
+    return (this._lastInstall = this._lastInstall.then(install, install));
   };
 
   removeModuleAsync = async (name: string): Promise<void> => {
-    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
-      /* $FlowFixMe */
-      this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
-      this._sendStateEvent();
-      this._publish();
-    }
+    /* $FlowFixMe */
+    this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
+    this._sendStateEvent();
+    this._publish();
   };
 
   /**
@@ -616,37 +594,35 @@ export default class SnackSession {
     modules: { [name: string]: ?string },
     onError: (name: string, e: Error) => mixed
   ): Promise<void> => {
-    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
-      const sync = async () => {
-        /* $FlowFixMe */
-        let dependencies = pickBy(this.dependencies, (value, name: string) =>
-          // Only keep dependencies in the modules list
-          modules.hasOwnProperty(name)
-        );
+    const sync = async () => {
+      /* $FlowFixMe */
+      let dependencies = pickBy(this.dependencies, (value, name: string) =>
+        // Only keep dependencies in the modules list
+        modules.hasOwnProperty(name)
+      );
 
-        // Install any new dependencies in series
-        for (const name of Object.keys(modules)) {
-          try {
-            dependencies = await this._addModuleAsync(name, modules[name], dependencies);
-          } catch (e) {
-            onError(name, e);
-          }
+      // Install any new dependencies in series
+      for (const name of Object.keys(modules)) {
+        try {
+          dependencies = await this._addModuleAsync(name, modules[name], dependencies);
+        } catch (e) {
+          onError(name, e);
         }
+      }
 
-        // Don't update state if nothing changed
-        if (!isEqual(dependencies, this.dependencies)) {
-          // Update dependencies list
-          this.dependencies = dependencies;
+      // Don't update state if nothing changed
+      if (!isEqual(dependencies, this.dependencies)) {
+        // Update dependencies list
+        this.dependencies = dependencies;
 
-          // Notify listeners
-          this._sendStateEvent();
-          this._publish();
-        }
-      };
+        // Notify listeners
+        this._sendStateEvent();
+        this._publish();
+      }
+    };
 
-      // Queue multiple syncs
-      return (this._lastModuleSync = this._lastModuleSync.then(sync, sync));
-    }
+    // Queue multiple syncs
+    return (this._lastModuleSync = this._lastModuleSync.then(sync, sync));
   };
 
   // Private methods and properties
@@ -849,8 +825,6 @@ export default class SnackSession {
   };
 
   _publishNotDebouncedAsync = async () => {
-    await this._handleFindDependenciesAsync();
-
     if (this.loadingMessage) {
       this._sendLoadingEvent();
     } else {
@@ -869,16 +843,6 @@ export default class SnackSession {
         dependencies: this.dependencies,
         metadata,
       };
-      if (!this.supportsFeature('PROJECT_DEPENDENCIES')) {
-        if (message.diff.hasOwnProperty('App.js')) {
-          message.diff['app.js'] = message.diff['App.js'];
-          delete message.diff['App.js'];
-        }
-        if (message.s3url.hasOwnProperty('App.js')) {
-          message.s3url['app.js'] = message.s3url['App.js'];
-          delete message.s3url['App.js'];
-        }
-      }
 
       this.pubnub.publish({ channel: this.channel, message }, (status, response) => {
         if (status.error) {
@@ -989,9 +953,9 @@ export default class SnackSession {
       count++;
 
       this._log(
-        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${version
-          ? `@${version}`
-          : ''}?platforms=ios,android`
+        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${
+          version ? `@${version}` : ''
+        }?platforms=ios,android`
       );
       const res = await fetch(
         `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
@@ -1023,7 +987,7 @@ export default class SnackSession {
     const match = /^(?:@([^/?]+)\/)?([^@/?]+)(?:\/([^@]+))?/.exec(name);
 
     if (!match) {
-      return Promise.reject(new Error(`Failed to parse the package name: '${name}'`))
+      return Promise.reject(new Error(`Failed to parse the package name: '${name}'`));
     }
 
     const fullName = (match[1] ? `@${match[1]}/` : '') + match[2];
@@ -1064,179 +1028,6 @@ export default class SnackSession {
 
     let results = await Promise.all(promises);
     return results.every(result => result);
-  };
-
-  _handleFindDependenciesAsync = async () => {
-    if (this.supportsFeature('PROJECT_DEPENDENCIES')) {
-      return;
-    }
-
-    const files = this.files;
-
-    if (this.isResolving) {
-      return;
-    }
-
-    this.isResolving = true;
-
-    try {
-      await Promise.all(
-        Object.keys(files).map(async key => {
-          if (key.endsWith('.js')) {
-            const codeAtStartOfFindDependencies = files[key].contents;
-            const codeWithVersions = await this._findDependenciesOnceAsync(files[key].contents);
-            if (files[key].contents === codeAtStartOfFindDependencies) {
-              // can be null if no changes need to be made
-              if (codeWithVersions) {
-                files[key].contents = codeWithVersions;
-                this._sendStateEvent();
-              }
-            }
-          }
-        })
-      );
-    } catch (e) {
-      console.error(e);
-    } finally {
-      this.loadingMessage = null;
-      this.isResolving = false;
-      this._sendStateEvent();
-    }
-  };
-
-  _findDependenciesOnceAsync = async (file: string): Promise<?string> => {
-    let modules: { [string]: string };
-
-    try {
-      // Find all module imports in the code
-      // This will skip local imports and reserved ones
-      modules = pickBy(
-        /* $FlowFixMe */
-        findModuleDependencies(file),
-        (version: string, module: string) =>
-          !module.startsWith('.') && !isModulePreloaded(module, this.sdkVersion)
-      );
-    } catch (e) {
-      // Likely a parse error
-      this._error(`Couldn't find dependencies: ${e.message}`);
-      return null;
-    }
-
-    // Check if the dependencies already exist
-    const changedModules = Object.keys(modules).filter(moduleName => {
-      return (
-        !this.dependencies.hasOwnProperty(moduleName) ||
-        modules[moduleName] !== this.dependencies[moduleName].version
-      );
-    });
-    if (!Object.keys(modules).length || !changedModules.length) {
-      this._log(`All dependencies are already loaded: ${JSON.stringify(modules)}`);
-      return null;
-    }
-
-    this._sendStateEvent();
-    this.loadingMessage = `Resolving dependencies`;
-    this._sendLoadingEvent();
-
-    // TODO: only run the following code after a delay to ensure the user has finished typing
-    try {
-      // Fetch the dependencies
-      // This will also trigger bundling
-      this._log(`Fetching dependencies: ${JSON.stringify(modules)}`);
-      const results = await Promise.all(
-        Object.keys(modules).map(name => this._maybeFetchDependencyAsync(name, modules[name]))
-      );
-      this._log(`Got dependencies: ${JSON.stringify(results)}`);
-      // results will have an error key if they failed
-
-      let peerDependencies = {};
-      let peerDependencyResolutions = {};
-
-      // Some items might have peer dependencies
-      // We need to collect them and install them
-      results.map(it => {
-        if (it.dependencies) {
-          Object.keys(it.dependencies).forEach(name => {
-            if (!isModulePreloaded(name, this.sdkVersion)) {
-              // $FlowFixMe we already confirmed it.dependencies exists
-              peerDependencies[name] = { version: it.dependencies[name], isUserSpecified: false };
-            }
-          });
-        }
-      });
-
-      // Set dependencies to the updated list
-      // TODO: Understand if / why this line is this neccesary
-      this.dependencies = { ...this.dependencies, ...peerDependencies };
-      this._sendStateEvent();
-
-      // Fetch the peer dependencies
-      this._log(`Fetching peer dependencies: ${JSON.stringify(peerDependencies)}`);
-      peerDependencyResolutions = await Promise.all(
-        Object.keys(peerDependencies).map(name =>
-          this._maybeFetchDependencyAsync(name, peerDependencies[name].version)
-        )
-      );
-
-      // Collect all dependency and peer dependency names and version
-      const dependencies = {};
-
-      // do peerDeps first to make sure we prioritize the non-peerDeps versions
-      peerDependencyResolutions.forEach(it => {
-        dependencies[it.name] = { version: it.version, isUserSpecified: false };
-      });
-
-      results.forEach(it => {
-        dependencies[it.name] = { version: it.version, isUserSpecified: true };
-      });
-
-      let code = file;
-
-      // We need to insert peer dependencies in code when found
-      if (peerDependencyResolutions.length && !this.supportsFeature('PROJECT_DEPENDENCIES')) {
-        this._log(`Adding imports for peer dependencies: ${JSON.stringify(peerDependencies)}`);
-
-        const { default: insertImports } = await import('./utils/insertImports');
-
-        code = insertImports(
-          code,
-          peerDependencyResolutions.map(it => ({
-            // Insert an import statement for the module
-            // This will skip the import if already present
-            from: it.name,
-          }))
-        );
-      }
-
-      // TODO: this system will not remove old dependencies that are no longer needed!
-      Object.assign(this.dependencies, dependencies);
-
-      if (!this.supportsFeature('PROJECT_DEPENDENCIES')) {
-        this._log('Writing module versions');
-        code = writeModuleVersions(code, dependencies);
-      }
-
-      this._sendStateEvent();
-
-      return code;
-    } catch (e) {
-      // TODO: Show user that there is an error getting dependencies
-      this._error(`Error in _findDependenciesOnceAsync: ${e.message}`);
-    } finally {
-      this._sendStateEvent();
-    }
-  };
-
-  _removeModuleVersionPins = () => {
-    Object.keys(this.files).map(key => {
-      if (key.endsWith('.js')) {
-        try {
-          this.files[key].contents = removeModuleVersions(this.files[key].contents);
-        } catch (e) {
-          // Do nothing
-        }
-      }
-    });
   };
 
   _addModuleAsync = async (name: string, version: ?string, previous: ExpoDependencyV2) => {
