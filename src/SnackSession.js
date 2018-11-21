@@ -501,16 +501,16 @@ export default class SnackSession {
         this._sendStateEvent();
         let fullName;
         if (data.id.match(/.*\/.*/)) {
-          fullName = data.id;
+          fullName = data.id.replace('@snack', '');
         } else {
-          fullName = `@snack/${data.id}`;
+          fullName = data.id;
         }
 
         this._requestStatus();
         this.snackId = data.id;
         return {
           id: data.id,
-          url: `https://expo.io/${fullName}`,
+          url: `https://snack.expo.io/${data.id}`,
         };
       } else {
         throw new Error(
