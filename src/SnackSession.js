@@ -501,7 +501,7 @@ export default class SnackSession {
         this._sendStateEvent();
         let fullName;
         if (data.id.match(/.*\/.*/)) {
-          fullName = data.id.replace('@snack', '');
+          fullName = data.id.replace('@snack/', '');
         } else {
           fullName = data.id;
         }
