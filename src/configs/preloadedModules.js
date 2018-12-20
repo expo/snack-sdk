@@ -383,8 +383,10 @@ export const dependencies = {
     three: '0.90.0',
   },
   '31.0.0': {
-    '@expo/vector-icons': '6.3.1',
+    '@expo/vector-icons': '8.0.0',
     expo: '31.0.0',
+    'lottie-react-native': '2.5.0',
+    'react-native-maps': '0.22.0',
     'react-native-screens': '1.0.0-alpha.15',
     'react-native-gesture-handler': '1.0.8',
     'react-native-reanimated': '1.0.0-alpha.10',
