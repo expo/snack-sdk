@@ -5,7 +5,7 @@ Have a problem with the code in this repository? Please file issues & bug report
 at https://github.com/expo/expo. Thanks!
 
 Interested in integrating the Snack SDK into your project?
-Please email `support@expo.io` for asistance and to receive updates about any upgrades to the SDK
+Check out https://forums.expo.io/c/snack for assistance and to receive updates about any upgrades to the SDK.
 
 ## Documentation
 
