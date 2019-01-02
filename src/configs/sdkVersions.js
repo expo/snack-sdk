@@ -6,6 +6,7 @@ import semver from 'semver';
 const minFeatureVersion = {
   MULTIPLE_FILES: '21.0.0',
   PROJECT_DEPENDENCIES: '25.0.0',
+  TYPESCRIPT: '31.0.0',
 };
 
 // special casing of features that have been backported to particular SDK versions
