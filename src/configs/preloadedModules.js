@@ -395,4 +395,17 @@ export const dependencies = {
     'react-native': '0.57.1',
     react: '16.5.0',
   },
+  '32.0.0': {
+    '@expo/vector-icons': '8.1.0',
+    expo: '32.0.0',
+    'lottie-react-native': '2.5.0',
+    'react-native-maps': '0.22.1',
+    'react-native-screens': '1.0.0-alpha.19',
+    'react-native-gesture-handler': '1.0.12',
+    'react-native-reanimated': '1.0.0-alpha.19',
+    'react-native-svg': '8.0.10',
+    'react-native-vector-icons': 'expo/vector-icons#8.1.0',
+    'react-native': '0.57.1',
+    react: '16.5.0',
+  },
 };
