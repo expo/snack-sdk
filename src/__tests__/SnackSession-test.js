@@ -169,11 +169,13 @@ describe('sendCodeAsync', () => {
     stopMockingDate();
     await timeout(50);
 
-    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
+    let result = session.pubnub.publish.mock.calls[0][0];
+    delete result.message.metadata;
+    expect(result).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',
-        diff: { 'app.js': NEW_CODE_DIFF },
+        diff: { 'App.js': NEW_CODE_DIFF },
         s3url: {},
       },
     });
@@ -194,13 +196,15 @@ describe('sendCodeAsync', () => {
     stopMockingDate();
     await timeout(50);
     fetchMock.restore();
-    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
+    let result = session.pubnub.publish.mock.calls[0][0];
+    delete result.message.metadata;
+    expect(result).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',
-        diff: { 'app.js': '' },
+        diff: { 'App.js': '' },
         s3url: {
-          'app.js':
+          'App.js':
             'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
         },
       },
@@ -226,16 +230,18 @@ describe('sendCodeAsync', () => {
     stopMockingDate();
     await timeout(50);
     fetchMock.restore();
-    expect(session.pubnub.publish.mock.calls[1][0]).toMatchObject({
+    let result = session.pubnub.publish.mock.calls[1][0];
+    delete result.message.metadata;
+    expect(result).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',
         diff: {
-          'app.js':
+          'App.js':
             "Index: code\n===================================================================\n--- code	\n+++ code	\n@@ -11,0 +11,1 @@\n+ And we're modifying this huge block of text. \n",
         },
         s3url: {
-          'app.js':
+          'App.js':
             'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/225764978e2bee1bcf2b1372048f7cd9',
         },
       },
@@ -266,13 +272,15 @@ describe('sendCodeAsync', () => {
     stopMockingDate();
     await timeout(50);
     fetchMock.restore();
-    expect(session.pubnub.publish.mock.calls[1][0]).toMatchObject({
+    let result = session.pubnub.publish.mock.calls[1][0];
+    delete result.message.metadata;
+    expect(result).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',
-        diff: { 'app.js': '' },
+        diff: { 'App.js': '' },
         s3url: {
-          'app.js':
+          'App.js':
             'https://snack-code-uploads-staging.s3-us-west-1.amazonaws.com/~code/dee64f147ae2e4f0a76c4837c0991f7d',
         },
       },
@@ -288,12 +296,14 @@ describe('sendCodeAsync', () => {
     setMockDate(1000);
     stopMockingDate();
     await timeout(50);
-    expect(session.pubnub.publish.mock.calls[0][0]).toMatchObject({
+    let result = session.pubnub.publish.mock.calls[0][0];
+    delete result.message.metadata;
+    expect(result).toMatchObject({
       channel: SESSION_ID,
       message: {
         type: 'CODE',
         s3url: {},
-        diff: { 'app.js': NEW_CODE_3_DIFF },
+        diff: { 'App.js': NEW_CODE_3_DIFF },
       },
     });
   });
@@ -419,7 +429,7 @@ describe('saveAsync', () => {
       method: 'POST',
       body: `{"manifest":{"sdkVersion":"25.0.0","dependencies":{"lodash":"1.0.0"}},"code":${JSON.stringify(
         INITIAL_CODE
-      )},"dependencies":{"lodash":{"version":"1.0.0"}}}`,
+      )},"dependencies":{"lodash":{"version":"1.0.0"}},"isDraft":false}`,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -447,7 +457,7 @@ describe('saveAsync', () => {
       method: 'POST',
       body: `{"manifest":{"sdkVersion":"${defaultSDKVersion}","name":"testname1","description":"testdescription1","dependencies":{}},"code":${JSON.stringify(
         INITIAL_CODE
-      )},"dependencies":{}}`,
+      )},"dependencies":{},"isDraft":false}`,
       headers: {
         'Content-Type': 'application/json',
       },
