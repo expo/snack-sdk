@@ -64,8 +64,10 @@ type Module = {
   version?: ?string,
 };
 
+const PRESENCE_TIMEOUT = 600;
+const HEARTBEAT_INTERVAL = 60;
 const MIN_CHANNEL_LENGTH = 6;
-const DEBOUNCE_INTERVAL = 500;
+const DEBOUNCE_INTERVAL = 1000;
 const MAX_PUBNUB_SIZE = 31500;
 const S3_BUCKET_URL = 'https://snack-code-uploads';
 
@@ -168,6 +170,8 @@ export default class SnackSession {
       publishKey: 'pub-c-2a7fd67b-333d-40db-ad2d-3255f8835f70',
       subscribeKey: 'sub-c-0b655000-d784-11e6-b950-02ee2ddab7fe',
       ssl: true,
+      presenceTimeout: PRESENCE_TIMEOUT,
+      heartbeatInterval: HEARTBEAT_INTERVAL,
     });
 
     this.pubnub.addListener({
