@@ -315,6 +315,7 @@ export default class SnackSession {
     // remove files that are no longer present in the code
     for (const key in this.files) {
       if (!files.hasOwnProperty(key)) {
+        delete this.diff[key];
         delete this.files[key];
       }
     }
@@ -840,6 +841,7 @@ export default class SnackSession {
       const metadata = this._getAnalyticsMetadata();
       let message;
       await this._handleUploadCodeAsync();
+
       message = {
         type: 'CODE',
         diff: cloneDeep(this.diff),
