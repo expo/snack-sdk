@@ -16,6 +16,7 @@ import difference from 'lodash/difference';
 import compact from 'lodash/compact';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
+import fp from 'lodash/fp';
 
 import * as DevSession from './utils/DevSession';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
@@ -23,6 +24,7 @@ import preloadedModules from './configs/preloadedModules';
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
+import buildAdk from './utils/buildAdkAsync';
 import { convertDependencyFormat } from './utils/projectDependencies';
 
 let platform = null;
@@ -70,6 +72,9 @@ const MIN_CHANNEL_LENGTH = 6;
 const DEBOUNCE_INTERVAL = 1000;
 const MAX_PUBNUB_SIZE = 31500;
 const S3_BUCKET_URL = 'https://snack-code-uploads';
+
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+const secondsToMilliseconds = seconds => seconds * 1000;
 
 type UserT = { idToken?: ?string, sessionSecret?: ?string };
 
@@ -277,7 +282,10 @@ export default class SnackSession {
   };
 
   /**
-   * Returns a url that will open the current Snack session in the Expo client when opened on a phone. You can create a QR code from this link or send it to the phone in another way. See https://github.com/expo/snack-sdk/tree/master/example for how to turn this into a QR code.
+   * Returns a url that will open the current Snack session in the Expo client when 
+   * opened on a phone. You can create a QR code from this link or send it to the phone 
+   * in another way. See https://github.com/expo/snack-sdk/tree/master/example for how to 
+   * turn this into a QR code.
    * @returns {Promise.<void>} A promise that contains the url when fulfilled.
    * @function
    */
@@ -291,6 +299,94 @@ export default class SnackSession {
 
     return url;
   };
+
+  /**
+   * Generates a default app.json template for the snack.
+   * @returns {Object} the app.json template
+   * @function
+   */
+  generateAppJson = (): Object => {
+    const appJsonTemplate = {
+      expo: {
+        description: this.description,
+        slug: 'snack-' + this.snackId,
+        privacy: 'unlisted',
+        sdkVersion: this.sdkVersion,
+        version: '1.0.0',
+        orientation: 'portrait',
+        primaryColor: '#cccccc',
+        icon: 'https://d1wp6m56sqw74a.cloudfront.net/~assets/c9aa1be8a6a6fe81e20c3ac4106a2ebc',
+        loading: {
+          icon: 'https://d1wp6m56sqw74a.cloudfront.net/~assets/c9aa1be8a6a6fe81e20c3ac4106a2ebc',
+          hideExponentText: false,
+        },
+        packagerOpts: {
+          assetExts: ['ttf', 'mp4', 'otf'],
+        },
+        ios: {
+          supportsTablet: true,
+        },
+      },
+    };
+    return appJsonTemplate;
+  };
+
+  /**
+   * Builds an apk from the snack and returns a url to download the apk.
+   * @param 
+   * @returns {Promise.<void>} A promise that contains the url when fulfilled.
+   * @function
+   */
+  getADKUrlAsync = async (
+    appJson : Object,
+    opts: {
+      current?: boolean,
+      mode?: string,
+      platform?: string,
+      expIds?: Array<string>,
+      type?: string,
+      releaseChannel?: string,
+      bundleIdentifier?: string,
+      publicUrl?: string,
+      sdkVersion?: string,
+    } = {}
+  ): Promise<string> => {
+    opts.sdkVersion = this.sdkVersion;
+    opts.platform = 'android';
+    // call out to build api here with url
+    const { id: buildId } = await buildAdkAsync(appJson, opts);
+    const completedJob = await this.wait(buildId, appJson, {});
+    const artifactUrl = completedJob.artifactId
+        ? `https://expo.io/artifacts/${completedJob.artifactId}`
+        : completedJob.artifacts.url;
+
+    return artifactUrl;
+  };
+
+  async wait(buildId, appJson, { timeout = 1200, interval = 60 } = {}) {
+    let time = new Date().getTime();
+    await sleep(secondsToMilliseconds(interval));
+    const endTime = time + secondsToMilliseconds(timeout);
+    while (time <= endTime) {
+      const res = await buildAdkAsync(appJson, {
+        current: false,
+        mode: 'status'
+      });
+      const job = fp.compose(
+        fp.head,
+        fp.filter(job => buildId && job.id === buildId),
+        fp.getOr([], 'jobs')
+      )(res);
+      switch (job.status) {
+        case 'finished':
+          return job;
+        default:
+          break;
+      }
+      time = new Date().getTime();
+      await sleep(secondsToMilliseconds(interval));
+    }
+  }
 
   /**
    * Upload an asset file that will be available in each connected mobile client
