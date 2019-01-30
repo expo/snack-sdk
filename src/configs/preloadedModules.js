@@ -398,6 +398,7 @@ export const dependencies = {
   '32.0.0': {
     '@expo/vector-icons': '8.1.0',
     expo: '32.0.0',
+    'expo-font': '2.0.0',
     'lottie-react-native': '2.5.0',
     'react-native-maps': '0.22.1',
     'react-native-screens': '1.0.0-alpha.19',
