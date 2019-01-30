@@ -24,7 +24,7 @@ import preloadedModules from './configs/preloadedModules';
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
-import buildAdk from './utils/buildAdkAsync';
+import buildAdkAsync from './utils/buildProject';
 import { convertDependencyFormat } from './utils/projectDependencies';
 
 let platform = null;
