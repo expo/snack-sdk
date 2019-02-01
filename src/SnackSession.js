@@ -24,7 +24,7 @@ import preloadedModules from './configs/preloadedModules';
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
-import buildAdkAsync from './utils/buildProject';
+import buildApkAsync from './utils/buildProject';
 import { convertDependencyFormat } from './utils/projectDependencies';
 
 let platform = null;
@@ -334,27 +334,16 @@ export default class SnackSession {
   /**
    * Builds an apk from the snack and returns a url to download the apk.
    * @param 
-   * @returns {Promise.<void>} A promise that contains the url when fulfilled.
+   * @returns {Promise.<string>} A promise that contains the url when fulfilled.
    * @function
    */
-  getADKUrlAsync = async (
-    appJson : Object,
-    opts: {
-      current?: boolean,
-      mode?: string,
-      platform?: string,
-      expIds?: Array<string>,
-      type?: string,
-      releaseChannel?: string,
-      bundleIdentifier?: string,
-      publicUrl?: string,
-      sdkVersion?: string,
-    } = {}
+  getApkUrlAsync = async (
+    appJson : Object
   ): Promise<string> => {
+    opts = {};
     opts.sdkVersion = this.sdkVersion;
-    opts.platform = 'android';
     // call out to build api here with url
-    const { id: buildId } = await buildAdkAsync(appJson, opts);
+    const { id: buildId } = await buildApkAsync(appJson, opts);
     const completedJob = await this.wait(buildId, appJson, {});
     const artifactUrl = completedJob.artifactId
         ? `https://expo.io/artifacts/${completedJob.artifactId}`
@@ -363,12 +352,12 @@ export default class SnackSession {
     return artifactUrl;
   };
 
-  async wait(buildId, appJson, { timeout = 1200, interval = 60 } = {}) {
+  wait = async (buildId, appJson, { timeout = 1200, interval = 60 } = {}) => {
     let time = new Date().getTime();
     await sleep(secondsToMilliseconds(interval));
     const endTime = time + secondsToMilliseconds(timeout);
     while (time <= endTime) {
-      const res = await buildAdkAsync(appJson, {
+      const res = await buildApkAsync(appJson, {
         current: false,
         mode: 'status'
       });
@@ -386,7 +375,7 @@ export default class SnackSession {
       time = new Date().getTime();
       await sleep(secondsToMilliseconds(interval));
     }
-  }
+  };
 
   /**
    * Upload an asset file that will be available in each connected mobile client

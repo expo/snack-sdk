@@ -1,47 +1,67 @@
-import joi from 'joi';
+import axios from 'axios';
+import slugid from 'slugid';
 
-export default function buildAdkAsync(
+const MAX_CONTENT_LENGTH = 100 /* MB */ * 1024 * 1024;
+
+export default function buildApkAsync(
   appJson : Object,
   options: {
-    current?: boolean,
-    mode?: string,
-    platform?: string,
-    expIds?: Array<string>,
-    type?: string,
-    releaseChannel?: string,
-    bundleIdentifier?: string,
-    publicUrl?: string,
     sdkVersion?: string,
   } = {}
 ) {
 
-  const schema = joi.object().keys({
-    current: joi.boolean(),
-    mode: joi.string(),
-    platform: joi.any().valid('android'),
-    expIds: joi.array(),
-    type: joi.any().valid('archive', 'simulator', 'client'),
-    releaseChannel: joi.string().regex(/[a-z\d][a-z\d._-]*/),
-    bundleIdentifier: joi.string().regex(/^[a-zA-Z][a-zA-Z0-9\-\.]+$/),
-    publicUrl: joi.string(),
-    sdkVersion: joi.strict(),
-  });
-
-  const { error } = joi.validate(options, schema);
-  // todo: error handling
-
+  options.platform = 'android';
   exp = appJson.expo;
 
-  if (options.mode !== 'status' && (options.platform === 'android' || options.platform === 'all')) {
-    if (!exp.android || !exp.android.package) {
-      // todo: error handling
-      // Must specify a java package in order to build this experience for Android.
-      // Please specify one in ${configName} at "${configPrefix}android.package"
-    }
-  }
-
-  return await Api.callMethodAsync('build', [], 'put', {
+  return await callMethodAsync('build', 'put', {
     manifest: exp,
     options,
   });
+}
+
+async function _callMethodAsync(
+  methodName: string,
+  method: string,
+  requestBody: ?Object
+): Promise<any> {
+  const clientId = await Session.clientIdAsync();
+
+  let headers: any = {
+    'Exp-ClientId': 'c-' + slugid.v4();,
+  };
+
+  let url =
+      'https://exp.host/--/api/' +
+      encodeURIComponent(methodName);
+
+  let options = {
+    url,
+    method: method,
+    headers,
+    maxContentLength: MAX_CONTENT_LENGTH,
+  };
+
+  if (requestBody) {
+    options = {
+      ...options,
+      data: requestBody,
+    };
+  }
+
+  let response = await axios.request(options);
+  if (!response) {
+    throw new Error('Unexpected error: Request failed.');
+  }
+  let responseBody = response.data;
+  var responseObj;
+  if (_.isString(responseBody)) {
+    try {
+      responseObj = JSON.parse(responseBody);
+    } catch (e) {
+      //
+    }
+  } else {
+    responseObj = responseBody;
+  }
+  return responseObj;
 }
