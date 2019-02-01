@@ -13,7 +13,7 @@ export default function buildApkAsync(
   options.platform = 'android';
   exp = appJson.expo;
 
-  return await callMethodAsync('build', 'put', headers, {
+  return await _callMethodAsync('build', 'put', headers, {
     manifest: exp,
     options,
   });
