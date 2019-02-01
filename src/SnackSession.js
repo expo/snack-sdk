@@ -371,11 +371,10 @@ export default class SnackSession {
         fp.filter(job => buildId && job.id === buildId),
         fp.getOr([], 'jobs')
       )(res);
-      switch (job.status) {
-        case 'finished':
-          return job;
-        default:
-          break;
+      if (job.status == 'finished') {
+        return job;
+      } else {
+        break;
       }
       time = new Date().getTime();
       await sleep(secondsToMilliseconds(interval));
