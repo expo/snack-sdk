@@ -349,7 +349,7 @@ export default class SnackSession {
       ...(this.user.sessionSecret ? { 'Expo-Session': this.user.sessionSecret } : {})
     };
     const { id: buildId } = await buildApkAsync(appJson, headers, opts);
-    const completedJob = await this.wait(buildId, appJson, {});
+    const completedJob = await this.wait(buildId, appJson, headers, {});
     const artifactUrl = completedJob.artifactId
         ? `https://expo.io/artifacts/${completedJob.artifactId}`
         : completedJob.artifacts.url;
@@ -357,12 +357,12 @@ export default class SnackSession {
     return artifactUrl;
   };
 
-  wait = async (buildId, appJson, { timeout = 1200, interval = 60 } = {}) => {
+  wait = async (buildId, appJson, headers, { timeout = 1200, interval = 60 } = {}) => {
     let time = new Date().getTime();
     await sleep(secondsToMilliseconds(interval));
     const endTime = time + secondsToMilliseconds(timeout);
     while (time <= endTime) {
-      const res = await buildApkAsync(appJson, {
+      const res = await buildApkAsync(appJson, headers, {
         current: false,
         mode: 'status'
       });
