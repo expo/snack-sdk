@@ -1,10 +1,10 @@
 import axios from 'axios';
-import slugid from 'slugid';
 
 const MAX_CONTENT_LENGTH = 100 /* MB */ * 1024 * 1024;
 
 export default function buildApkAsync(
   appJson : Object,
+  headers : Object,
   options: {
     sdkVersion?: string,
   } = {}
@@ -13,7 +13,7 @@ export default function buildApkAsync(
   options.platform = 'android';
   exp = appJson.expo;
 
-  return await callMethodAsync('build', 'put', {
+  return await callMethodAsync('build', 'put', headers, {
     manifest: exp,
     options,
   });
@@ -22,13 +22,10 @@ export default function buildApkAsync(
 async function _callMethodAsync(
   methodName: string,
   method: string,
+  headers: Object,
   requestBody: ?Object
 ): Promise<any> {
   const clientId = await Session.clientIdAsync();
-
-  let headers: any = {
-    'Exp-ClientId': 'c-' + slugid.v4();,
-  };
 
   let url =
       'https://exp.host/--/api/' +
@@ -36,7 +33,7 @@ async function _callMethodAsync(
 
   let options = {
     url,
-    method: method,
+    method,
     headers,
     maxContentLength: MAX_CONTENT_LENGTH,
   };

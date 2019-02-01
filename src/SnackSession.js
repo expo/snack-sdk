@@ -17,6 +17,7 @@ import compact from 'lodash/compact';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
 import fp from 'lodash/fp';
+import slugid from 'slugid';
 
 import * as DevSession from './utils/DevSession';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
@@ -342,8 +343,12 @@ export default class SnackSession {
   ): Promise<string> => {
     opts = {};
     opts.sdkVersion = this.sdkVersion;
-    // call out to build api here with url
-    const { id: buildId } = await buildApkAsync(appJson, opts);
+    let headers: any = {
+      'Exp-ClientId': 'c-' + slugid.v4(),
+      ...(this.user.idToken ? { Authorization: `Bearer ${this.user.idToken}` } : {}),
+      ...(this.user.sessionSecret ? { 'Expo-Session': this.user.sessionSecret } : {})
+    };
+    const { id: buildId } = await buildApkAsync(appJson, headers, opts);
     const completedJob = await this.wait(buildId, appJson, {});
     const artifactUrl = completedJob.artifactId
         ? `https://expo.io/artifacts/${completedJob.artifactId}`
