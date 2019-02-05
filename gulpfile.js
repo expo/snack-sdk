@@ -10,7 +10,7 @@ const sourcemaps = require('gulp-sourcemaps');
 
 const paths = {
   source: {
-    js: 'src/**/*.js',
+    js: 'src1/**/*.js',
   },
   build: {
     node: 'dist',
@@ -18,24 +18,24 @@ const paths = {
   },
 };
 
-const transpile = (desitantion, config) =>
+const transpile = (destination, config) =>
   gulp
     .src(paths.source.js)
-    .pipe(changed(desitantion))
+    .pipe(changed(destination))
     .pipe(plumber())
     .pipe(sourcemaps.init({ identityMap: true }))
     .pipe(babel(config))
-    .pipe(sourcemaps.write('__sourcemaps__', { sourceRoot: '/snack-sdk/src' }))
-    .pipe(gulp.dest(desitantion));
+    .pipe(sourcemaps.write('__sourcemaps__', { sourceRoot: '/snack-sdk/src1' }))
+    .pipe(gulp.dest(destination));
 
-const flow = desitantion =>
+const flow = destination =>
   gulp
     .src(paths.source.js)
     .pipe(rename({ extname: '.js.flow' }))
-    .pipe(gulp.dest(desitantion));
+    .pipe(gulp.dest(destination));
 
-const build = (desitantion, config) =>
-  gulp.parallel(() => transpile(desitantion, config), () => flow(desitantion));
+const build = (destination, config) =>
+  gulp.parallel(() => transpile(destination, config), () => flow(destination));
 
 gulp.task('build:node', build(paths.build.node));
 gulp.task('build:esm', build(paths.build.esm, require('./.babelrc.esm.json')));
