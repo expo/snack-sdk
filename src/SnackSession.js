@@ -344,6 +344,19 @@ export default class SnackSession {
     return { url: url + '/' + id };
   };
 
+  reloadSnack = () => {
+    this.pubnub.publish(
+      { channel: this.channel, message: { type: 'RELOAD_SNACK' } },
+      (status, response) => {
+        if (status.error) {
+          this._error(`Error reloading app`);
+        } else {
+          this._log('Reloaded successfully!');
+        }
+      }
+    );
+  };
+
   // TODO: error when changing SDK to an unsupported version
   setSdkVersion = (sdkVersion: SDKVersion): void => {
     if (this.sdkVersion !== sdkVersion) {
