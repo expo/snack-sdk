@@ -1,47 +1,54 @@
-import joi from 'joi';
+import axios from 'axios';
 
-export default function buildAdkAsync(
+const MAX_CONTENT_LENGTH = 100 /* MB */ * 1024 * 1024;
+
+export default async function buildApkAsync(
   appJson : Object,
-  options: {
-    current?: boolean,
-    mode?: string,
-    platform?: string,
-    expIds?: Array<string>,
-    type?: string,
-    releaseChannel?: string,
-    bundleIdentifier?: string,
-    publicUrl?: string,
-    sdkVersion?: string,
-  } = {}
+  headers : Object,
+  options : Object
 ) {
 
-  const schema = joi.object().keys({
-    current: joi.boolean(),
-    mode: joi.string(),
-    platform: joi.any().valid('android'),
-    expIds: joi.array(),
-    type: joi.any().valid('archive', 'simulator', 'client'),
-    releaseChannel: joi.string().regex(/[a-z\d][a-z\d._-]*/),
-    bundleIdentifier: joi.string().regex(/^[a-zA-Z][a-zA-Z0-9\-\.]+$/),
-    publicUrl: joi.string(),
-    sdkVersion: joi.strict(),
-  });
+  const exp = appJson.expo;
 
-  const { error } = joi.validate(options, schema);
-  // todo: error handling
-
-  exp = appJson.expo;
-
-  if (options.mode !== 'status' && (options.platform === 'android' || options.platform === 'all')) {
-    if (!exp.android || !exp.android.package) {
-      // todo: error handling
-      // Must specify a java package in order to build this experience for Android.
-      // Please specify one in ${configName} at "${configPrefix}android.package"
-    }
-  }
-
-  return await Api.callMethodAsync('build', [], 'put', {
+  return await _callMethodAsync('build', 'put', headers, {
     manifest: exp,
-    options,
+    options : options,
   });
+}
+
+async function _callMethodAsync(
+  methodName: string,
+  method: string,
+  headers: Object,
+  requestBody: Object
+): Promise<any> {
+
+  let url =
+      'http://0.0.0.0:3000/--/api/' +
+      encodeURIComponent(methodName);
+
+  let options = {
+    url,
+    method,
+    headers,
+    maxContentLength: MAX_CONTENT_LENGTH,
+    data: requestBody,
+  };
+
+  let response = await axios.request(options);
+  if (!response) {
+    throw new Error('Unexpected error: Request failed.');
+  }
+  let responseBody = response.data;
+  var responseObj;
+  if (typeof responseBody === 'string' || responseBody instanceof String) {
+    try {
+      responseObj = JSON.parse(responseBody);
+    } catch (e) {
+      //
+    }
+  } else {
+    responseObj = responseBody;
+  }
+  return responseObj;
 }
