@@ -411,6 +411,7 @@ export default class SnackSession {
     // remove files that are no longer present in the code
     for (const key in this.files) {
       if (!files.hasOwnProperty(key)) {
+        delete this.diff[key];
         delete this.files[key];
       }
     }
@@ -437,6 +438,19 @@ export default class SnackSession {
     const save = await this.saveAsync();
     const id = save.id;
     return { url: url + '/' + id };
+  };
+
+  reloadSnack = () => {
+    this.pubnub.publish(
+      { channel: this.channel, message: { type: 'RELOAD_SNACK' } },
+      (status, response) => {
+        if (status.error) {
+          this._error(`Error reloading app`);
+        } else {
+          this._log('Reloaded successfully!');
+        }
+      }
+    );
   };
 
   // TODO: error when changing SDK to an unsupported version
@@ -936,6 +950,7 @@ export default class SnackSession {
       const metadata = this._getAnalyticsMetadata();
       let message;
       await this._handleUploadCodeAsync();
+
       message = {
         type: 'CODE',
         diff: cloneDeep(this.diff),
