@@ -24,7 +24,6 @@ import preloadedModules from './configs/preloadedModules';
 import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
-import buildApkAsync from './utils/buildProject';
 import { convertDependencyFormat } from './utils/projectDependencies';
 
 let platform = null;
@@ -95,7 +94,6 @@ export default class SnackSession {
   diff: { [key: string]: string };
   s3url: { [key: string]: string };
   snackId: ?string;
-  slug: ?string;
   sdkVersion: SDKVersion;
   isVerbose: boolean;
   isStarted: boolean;
@@ -157,7 +155,6 @@ export default class SnackSession {
     this.deviceId = options.deviceId;
 
     this.snackId = options.snackId;
-    this.slug = options.slug;
     this.name = options.name;
     this.description = options.description;
     this.dependencies = options.dependencies || {};
@@ -310,7 +307,7 @@ export default class SnackSession {
   generateAppJson = (): Object => {
     const appJsonTemplate = {
       expo: {
-        slug: this.slug,
+        slug: this.snackId.split('/')[1],
         name: this.name,
         description: this.description,
         privacy: 'unlisted',
@@ -354,15 +351,12 @@ export default class SnackSession {
       isSnack: true,
       sdkVersion: this.sdkVersion
     };
-    let headers: any = {
-      ...(this.user.idToken ? { Authorization: `Bearer ${this.user.idToken}` } : {}),
-      ...(this.user.sessionSecret ? { 'Expo-Session': this.user.sessionSecret } : {})
-    };
-    const { id: buildId } = await buildApkAsync(appJson, headers, opts);
+    const manifest = appJson.expo;
+    const { id: buildId } = await this.buildAsync(manifest, opts);
 
     console.log('https://expo.io/builds/' + buildId);
 
-    const completedJob = await this.waitForApk(buildId, appJson, headers, {});
+    const completedJob = await this.waitForBuildJob(buildId, manifest, 'android', {});
     const artifactUrl = completedJob.artifactId
         ? `https://expo.io/artifacts/${completedJob.artifactId}`
         : completedJob.artifacts.url;
@@ -371,15 +365,15 @@ export default class SnackSession {
     return artifactUrl;
   };
 
-  waitForApk = async (buildId, appJson, headers, { timeout = 1200, interval = 60 } = {}) => {
+  waitForBuildJob = async (buildId, manifest, platform, { timeout = 1200, interval = 60 } = {}) => {
     let time = new Date().getTime();
     await sleep(secondsToMilliseconds(interval));
     const endTime = time + secondsToMilliseconds(timeout);
     while (time <= endTime) {
-      const res = await buildApkAsync(appJson, headers, {
+      const res = await this.buildAsync(manifest, {
         current: false,
         mode: 'status',
-        platform : 'android',
+        platform,
       });
       const job = fp.compose(
         fp.head,
@@ -394,6 +388,33 @@ export default class SnackSession {
       await sleep(secondsToMilliseconds(interval));
     }
   };
+
+  buildAsync = async (manifest, options) => {
+
+    const url = `${this.expoApiUrl}/--/api/build`;
+
+    const payload = {
+      manifest,
+      options,
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.user.idToken ? { Authorization: `Bearer ${this.user.idToken}` } : {}),
+          ...(this.user.sessionSecret ? { 'Expo-Session': this.user.sessionSecret } : {}),
+        },
+      });
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  }
 
   /**
    * Upload an asset file that will be available in each connected mobile client
@@ -629,7 +650,6 @@ export default class SnackSession {
 
         this._requestStatus();
         this.snackId = data.id;
-        this.slug = data.id.split('/')[1];
         return {
           id: data.id,
           url: `https://expo.io/${fullName}`,
