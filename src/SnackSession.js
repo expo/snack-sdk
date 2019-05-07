@@ -135,7 +135,7 @@ export default class SnackSession {
     this.isVerbose = !!options.verbose;
     this.channel = options.sessionId || shortid.generate();
     this.host = options.host || 'expo.io';
-    this.expoApiUrl = 'https://expo.io';
+    this.expoApiUrl = 'http://0.0.0.0:3000';
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
     if (options.authorizationToken) {
@@ -301,17 +301,21 @@ export default class SnackSession {
 
   /**
    * Generates a default app.json template for the snack.
+   * The version, ios, and android fields need to be replaced by the client and 
+   * are examples only.
    * @returns {Object} the app.json template
    * @function
    */
   generateAppJson = (): Object => {
+    console.log(this.snackId.split('/')[1]);
     const appJsonTemplate = {
       expo: {
         slug: this.snackId.split('/')[1],
         name: this.name,
         description: this.description,
-        privacy: 'unlisted',
         sdkVersion: this.sdkVersion,
+        // Everything below this should be replaced by client.
+        privacy: 'unlisted',
         version: '1.0.0',
         orientation: 'portrait',
         primaryColor: '#cccccc',
@@ -324,16 +328,65 @@ export default class SnackSession {
           assetExts: ['ttf', 'mp4', 'otf'],
         },
         ios: {
-          supportsTablet: true,
+          bundleIdentifier: "org.example.test",
+          supportsTablet: false,
         },
         android: {
           package: "org.example.test",
+          config: {"splash": {"resizeMode": "cover"}},
           permissions: ["CAMERA"],
           versionCode: 1,
         },
       },
     };
     return appJsonTemplate;
+  };
+
+  getIpaUrlAsync = async (
+    appJson : Object
+  ): Promise<string> => {
+    const opts = {
+      platform : 'ios',
+      bundleIdentifier: "org.example.test",
+      mode: 'create',
+      isSnack: true,
+      sdkVersion: this.sdkVersion
+    };
+    const manifest = appJson.expo;
+    const { id: buildId } = await this.buildAsync(manifest, opts);
+
+    console.log('https://expo.io/builds/' + buildId);
+
+    const completedJob = await this.waitForBuildJob(buildId, manifest, 'ios', {});
+    const artifactUrl = completedJob.artifactId
+        ? `https://expo.io/artifacts/${completedJob.artifactId}`
+        : completedJob.artifacts.url;
+
+    console.log(artifactUrl);
+    return artifactUrl;
+  }
+
+  publishIpaAsync = async (
+    appJson : Object
+  ): Promise<string> => {
+    const opts = {
+      platform : 'ios',
+      mode: 'create',
+      isSnack: true,
+      sdkVersion: this.sdkVersion
+    };
+    const manifest = appJson.expo;
+    const { id: buildId } = await this.buildAsync(manifest, opts);
+
+    console.log('https://expo.io/builds/' + buildId);
+
+    const completedJob = await this.waitForBuildJob(buildId, manifest, 'ios', {});
+    const artifactUrl = completedJob.artifactId
+        ? `https://expo.io/artifacts/${completedJob.artifactId}`
+        : completedJob.artifacts.url;
+
+    console.log(artifactUrl);
+    return artifactUrl;
   };
 
   /**
@@ -390,9 +443,7 @@ export default class SnackSession {
   };
 
   buildAsync = async (manifest, options) => {
-
     const url = `${this.expoApiUrl}/--/api/build`;
-
     const payload = {
       manifest,
       options,
