@@ -367,13 +367,17 @@ export default class SnackSession {
   }
 
   publishIpaAsync = async (
-    appJson : Object
+    appJson : Object,
+    appleUsername : string,
+    applePassword : string,
   ): Promise<string> => {
     const opts = {
       platform : 'ios',
       mode: 'create',
       isSnack: true,
-      sdkVersion: this.sdkVersion
+      sdkVersion: this.sdkVersion,
+      appleUsername,
+      applePassword
     };
     const manifest = appJson.expo;
     const { id: buildId } = await this.buildAsync(manifest, opts);
