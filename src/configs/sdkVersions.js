@@ -13,9 +13,10 @@ const minFeatureVersion = {
 export const versions = {
   '31.0.0': [],
   '32.0.0': [],
+  '33.0.0': [],
 };
 
-export const defaultSDKVersion = '32.0.0';
+export const defaultSDKVersion = '33.0.0';
 
 export type Feature = $Keys<typeof minFeatureVersion>;
 export type SDKVersion = $Keys<typeof versions>;
