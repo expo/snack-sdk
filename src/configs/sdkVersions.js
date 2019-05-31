@@ -11,11 +11,6 @@ const minFeatureVersion = {
 
 // special casing of features that have been backported to particular SDK versions
 export const versions = {
-  '26.0.0': [],
-  '27.0.0': [],
-  '28.0.0': [],
-  '29.0.0': [],
-  '30.0.0': [],
   '31.0.0': [],
   '32.0.0': [],
 };
