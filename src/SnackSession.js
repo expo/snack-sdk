@@ -974,10 +974,10 @@ export default class SnackSession {
       this._log(
         `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${
           version ? `@${version}` : ''
-        }?platforms=ios,android`
+        }?platforms=ios,android,web`
       );
       const res = await fetch(
-        `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android`
+        `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android,web`
       );
 
       if (res.status === 200) {
