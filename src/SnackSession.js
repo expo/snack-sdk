@@ -17,6 +17,7 @@ import compact from 'lodash/compact';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
 import fp from 'lodash/fp';
+import { GraphQLClient } from 'graphql-request'
 
 import * as DevSession from './utils/DevSession';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
@@ -281,9 +282,9 @@ export default class SnackSession {
   };
 
   /**
-   * Returns a url that will open the current Snack session in the Expo client when 
-   * opened on a phone. You can create a QR code from this link or send it to the phone 
-   * in another way. See https://github.com/expo/snack-sdk/tree/master/example for how to 
+   * Returns a url that will open the current Snack session in the Expo client when
+   * opened on a phone. You can create a QR code from this link or send it to the phone
+   * in another way. See https://github.com/expo/snack-sdk/tree/master/example for how to
    * turn this into a QR code.
    * @returns {Promise.<void>} A promise that contains the url when fulfilled.
    * @function
@@ -338,7 +339,7 @@ export default class SnackSession {
 
   /**
    * Builds an apk from the snack and returns a url to download the apk.
-   * @param 
+   * @param
    * @returns {Promise.<string>} A promise that contains the url when fulfilled.
    * @function
    */
@@ -383,7 +384,9 @@ export default class SnackSession {
       console.log(job.status);
       if (job.status === 'finished') {
         return job;
-      } 
+      } else if (job.status === 'errored') {
+        throw new Error(`Job status: ${job.status}`);
+      }
       time = new Date().getTime();
       await sleep(secondsToMilliseconds(interval));
     }
@@ -408,12 +411,39 @@ export default class SnackSession {
           ...(this.user.sessionSecret ? { 'Expo-Session': this.user.sessionSecret } : {}),
         },
       });
-      const data = await response.json();
-      return data;
+      if (response.ok) {
+        return response.json();
+      } else {
+        const err = new Error(`${response.status} server error: ${response.statusText}`);
+        console.error(err);
+        throw err;
+      }
     } catch (e) {
       console.error(e);
       throw e;
     }
+  }
+
+  cancelBuild = async (buildId) => {
+
+    const url = 'https://expo.io/--/graphql';
+    const graphQLClient = new GraphQLClient(url, {
+      headers: {
+        ...(this.user.idToken ? { Authorization: `Bearer ${this.user.idToken}` } : {}),
+        ...(this.user.sessionSecret ? { 'Expo-Session': this.user.sessionSecret } : {}),
+      },
+    });
+
+    const variables = { buildId };
+    const query = `
+      mutation CancelJob($buildId: ID!) {
+        buildJob(buildId: $buildId){
+          cancel { id status }
+        }
+      }
+    `;
+
+    return graphQLClient.request(query, variables);
   }
 
   /**
