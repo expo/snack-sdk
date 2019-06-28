@@ -16,7 +16,6 @@ import difference from 'lodash/difference';
 import compact from 'lodash/compact';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
-import fp from 'lodash/fp';
 import { GraphQLClient } from 'graphql-request'
 
 import * as DevSession from './utils/DevSession';
@@ -355,14 +354,11 @@ export default class SnackSession {
     const manifest = appJson.expo;
     const { id: buildId } = await this.buildAsync(manifest, opts);
 
-    console.log('https://expo.io/builds/' + buildId);
-
     const completedJob = await this.waitForBuildJob(buildId, manifest, 'android', {});
     const artifactUrl = completedJob.artifactId
-        ? `https://expo.io/artifacts/${completedJob.artifactId}`
+        ? `${this.expoApiUrl}/artifacts/${completedJob.artifactId}`
         : completedJob.artifacts.url;
 
-    console.log(artifactUrl);
     return artifactUrl;
   };
 
@@ -371,17 +367,16 @@ export default class SnackSession {
     await sleep(secondsToMilliseconds(interval));
     const endTime = time + secondsToMilliseconds(timeout);
     while (time <= endTime) {
-      const res = await this.buildAsync(manifest, {
+      const result = await this.buildAsync(manifest, {
         current: false,
         mode: 'status',
         platform,
       });
-      const job = fp.compose(
-        fp.head,
-        fp.filter(job => buildId && job.id === buildId),
-        fp.getOr([], 'jobs')
-      )(res);
-      console.log(job.status);
+      const {jobs = []} = result;
+      const job = jobs.find(job => buildId && job.id === buildId);
+      if (!job) {
+        throw new Error(`Build not found: ${buildId}`);
+      }
       if (job.status === 'finished') {
         return job;
       } else if (job.status === 'errored') {
