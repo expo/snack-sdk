@@ -185,6 +185,7 @@ export default class SnackSession {
             break;
           case 'RESEND_CODE':
             this._handleResendCodeMessage();
+            break;
           case 'STATUS_REPORT':
             this._handleStatusReport(message);
         }
