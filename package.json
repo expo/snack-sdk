@@ -1,6 +1,6 @@
 {
   "name": "snack-sdk",
-  "version": "2.2.1",
+  "version": "2.3.1",
   "description": "The Expo Snack SDK",
   "main": "dist/snack.js",
   "module": "esm/snack.js",
