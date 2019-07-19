@@ -300,43 +300,6 @@ export default class SnackSession {
   };
 
   /**
-   * Generates a default app.json template for the snack.
-   * @returns {Object} the app.json template
-   * @function
-   */
-  generateAppJson = (): Object => {
-    const appJsonTemplate = {
-      expo: {
-        slug: this.snackId.split('/')[1],
-        name: this.name,
-        description: this.description,
-        privacy: 'unlisted',
-        sdkVersion: this.sdkVersion,
-        version: '1.0.0',
-        orientation: 'portrait',
-        primaryColor: '#cccccc',
-        icon: 'https://d1wp6m56sqw74a.cloudfront.net/~assets/c9aa1be8a6a6fe81e20c3ac4106a2ebc',
-        loading: {
-          icon: 'https://d1wp6m56sqw74a.cloudfront.net/~assets/c9aa1be8a6a6fe81e20c3ac4106a2ebc',
-          hideExponentText: false,
-        },
-        packagerOpts: {
-          assetExts: ['ttf', 'mp4', 'otf'],
-        },
-        ios: {
-          supportsTablet: true,
-        },
-        android: {
-          package: "org.example.test",
-          permissions: ["CAMERA"],
-          versionCode: 1,
-        },
-      },
-    };
-    return appJsonTemplate;
-  };
-
-  /**
    * Builds an apk from the snack and returns a url to download the apk.
    * @param
    * @returns {Promise.<string>} A promise that contains the url when fulfilled.
@@ -421,7 +384,7 @@ export default class SnackSession {
 
   cancelBuild = async (buildId) => {
 
-    const url = 'https://expo.io/--/graphql';
+    const url = `${this.expoApiUrl}/--/graphql`;
     const graphQLClient = new GraphQLClient(url, {
       headers: {
         ...(this.user.idToken ? { Authorization: `Bearer ${this.user.idToken}` } : {}),
