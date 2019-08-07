@@ -397,6 +397,8 @@ export const dependencies = {
     'expo-web-browser': '5.0.0',
   },
   '34.0.0': {
+    '@expo/snack-static': '0.0.1',
+    '@expo/snack-static/react-native-logo.png': '0.0.1',
     '@expo/vector-icons': '8.1.0',
     expo: '34.0.1',
     'expo-font': '2.0.0',
