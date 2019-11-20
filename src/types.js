@@ -18,6 +18,13 @@ export type ExpoSnackFiles = {
   ...{ [string]: RequiredSnackFileAttributes },
 };
 
+export type ExpoWebPlayer = {
+  subscribe: () => void,
+  unsubscribe: () => void,
+  publish: (message: any) => void,
+  listen: (listener: (message: any) => void) => void,
+}
+
 export type ExpoSnackSessionArguments = {
   files: ExpoSnackFiles,
   sdkVersion?: SDKVersion,
@@ -31,8 +38,9 @@ export type ExpoSnackSessionArguments = {
   dependencies?: any, // TODO: more specific
   authorizationToken?: string,
   disableDevSession?: boolean,
-  user: { idToken?: ?string, sessionSecret?: ?string };
-  deviceId: ?string;
+  user: { idToken?: ?string, sessionSecret?: ?string },
+  deviceId: ?string,
+  player?: ExpoWebPlayer
 };
 
 export type ExpoSubscription = {
@@ -75,6 +83,7 @@ export type ExpoError = {
 };
 
 export type ExpoPubnubDeviceLog = {
+  type: 'CONSOLE',
   device: ExpoDevice,
   method: 'log' | 'error' | 'warn',
   payload: Array<any>,
@@ -111,7 +120,7 @@ export type ExpoStateEvent = {
   isResolving: boolean,
 };
 
-export type ExpoDependencyV1 = {[name: string]: string};
+export type ExpoDependencyV1 = { [name: string]: string };
 
 export type ExpoDependencyV2 = {
   [name: string]: {
@@ -121,8 +130,8 @@ export type ExpoDependencyV2 = {
     isUserSpecified: boolean, // can adjust version to resolve peerDeps if false
     peerDependencies?: {
       [name: string]: {
-        version: string
-      }
+        version: string,
+      },
     },
   },
 };
@@ -135,6 +144,57 @@ export type ExpoDependencyResponse = {
 };
 
 export type ExpoStatusResponse = {
+  type: 'STATUS_REPORT',
   previewLocation: string,
-  status: boolean
-}
+  status: boolean,
+};
+
+export type ExpoMessagingListeners = {
+  message(payload: {
+    message:
+      | ExpoPubnubDeviceLog
+      | ExpoStatusResponse
+      | { type: 'RESEND_CODE', device: ExpoDevice }
+      | { type: 'ERROR', error?: string, device: ExpoDevice },
+  }): void,
+  presence(payload: { action: 'join' | 'leave' | 'timeout', uuid: string }): void,
+  status(payload: {
+    category:
+      | 'PNConnectedCategory'
+      | 'PNNetworkDownCategory'
+      | 'PNNetworkIssuesCategory'
+      | 'PNReconnectedCategory'
+      | 'PNNetworkUpCategory',
+  }): void,
+};
+
+export type Transport = 'PubNub' | 'postMessage';
+
+export type ExpoMessaging = {
+  addListener(options: ExpoMessagingListeners): void,
+
+  publish(
+    channel: string,
+    message:
+      | { type: 'RELOAD_SNACK' }
+      | { type: 'REQUEST_STATUS' }
+      | {
+          type: 'LOADING_MESSAGE',
+          message: string,
+        }
+      | {
+          type: 'CODE',
+          diff: { [key: string]: string },
+          s3url: { [key: string]: string },
+          dependencies: ExpoDependencyV2,
+          metadata: { [key: string]: any },
+        },
+    transports: Transport[]
+  ): Promise<any[]>,
+
+  subscribe(channel: string): void,
+
+  unsubscribe(channel: string): void,
+};
+
+export type Platform = 'android' | 'ios' | 'web';
