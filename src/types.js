@@ -192,9 +192,9 @@ export type ExpoMessaging = {
     transports: Transport[]
   ): Promise<any[]>,
 
-  subscribe(channel: string): void,
+  subscribe(channel: string, transports: Transport[]): void,
 
-  unsubscribe(channel: string): void,
+  unsubscribe(channel: string, transports: Transport[]): void,
 };
 
 export type Platform = 'android' | 'ios' | 'web';

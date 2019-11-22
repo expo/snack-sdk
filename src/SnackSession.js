@@ -24,7 +24,7 @@ import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
 import { convertDependencyFormat } from './utils/projectDependencies';
-import type { Platform } from './types';
+import type { Platform, Transport } from './types';
 
 let platform = null;
 // + and - are used as delimiters in the uri, ensure they do not appear in the channel itself
@@ -115,6 +115,7 @@ export default class SnackSession {
   user: UserT; // dev
   deviceId: ?string; // dev
   disableDevSession: boolean;
+  pubNubEnabled: boolean = false;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
@@ -343,7 +344,11 @@ export default class SnackSession {
 
   reloadSnack = async () => {
     try {
-      await this.messaging.publish(this.channel, { type: 'RELOAD_SNACK' }, this._getTransports());
+      await this.messaging.publish(
+        this.channel,
+        { type: 'RELOAD_SNACK' },
+        this._getTransportsForPublish()
+      );
 
       this._log('Reloaded successfully!');
     } catch (e) {
@@ -406,6 +411,14 @@ export default class SnackSession {
   setDeviceId = (deviceId: string): Promise<mixed> => {
     this.deviceId = deviceId;
     return this._updateDevSession();
+  };
+
+  setPubNubEnabled = () => {
+    if (!this.pubNubEnabled) {
+      this._unsubscribe();
+      this.pubNubEnabled = true;
+      this._subscribe();
+    }
   };
 
   /**
@@ -541,7 +554,11 @@ export default class SnackSession {
     }
 
     try {
-      this.messaging.publish(this.channel, { type: 'REQUEST_STATUS' }, this._getTransports());
+      this.messaging.publish(
+        this.channel,
+        { type: 'REQUEST_STATUS' },
+        this._getTransportsForPublish()
+      );
       this._log('Requested Status');
     } catch (e) {
       this._error(`Error requesting status: ${e && e.message ? e.message : e}`);
@@ -589,7 +606,6 @@ export default class SnackSession {
   };
 
   removeModuleAsync = async (name: string): Promise<void> => {
-    /* $FlowFixMe */
     this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
     this._sendStateEvent();
     this._publish();
@@ -673,11 +689,23 @@ export default class SnackSession {
   };
 
   _subscribe = () => {
-    this.messaging.subscribe(this.channel);
+    const transports: Transport[] = ['postMessage'];
+
+    if (this.pubNubEnabled) {
+      transports.push('PubNub');
+    }
+
+    this.messaging.subscribe(this.channel, transports);
   };
 
   _unsubscribe = () => {
-    this.messaging.unsubscribe(this.channel);
+    const transports: Transport[] = ['postMessage'];
+
+    if (this.pubNubEnabled) {
+      transports.push('PubNub');
+    }
+
+    this.messaging.unsubscribe(this.channel, transports);
   };
 
   //s3code: cache of code saved on s3
@@ -824,12 +852,24 @@ export default class SnackSession {
 
   _connectedDevices: ExpoDevice[] = [];
 
-  _getTransports = (): any[] => {
+  _getTransportsForPublish = (): Transport[] => {
+    let transports: Transport[];
+
     if (this.supportsFeature('POSTMESSAGE_TRANSPORT')) {
-      return this._connectedDevices.map(d => (d.platform === 'web' ? 'postMessage' : 'PubNub'));
+      transports = this._connectedDevices.map(
+        d => (d.platform === 'web' ? 'postMessage' : 'PubNub')
+      );
+    } else {
+      transports = ['PubNub'];
     }
 
-    return ['PubNub'];
+    return transports.filter(transport => {
+      if (transport === 'PubNub') {
+        return this.pubNubEnabled;
+      }
+
+      return true;
+    });
   };
 
   _handleDeviceConnect = (device: ExpoDevice) => {
@@ -878,7 +918,7 @@ export default class SnackSession {
             dependencies: this.dependencies,
             metadata,
           },
-          this._getTransports()
+          this._getTransportsForPublish()
         );
 
         this._log('Published successfully!');
@@ -906,7 +946,7 @@ export default class SnackSession {
           type: 'LOADING_MESSAGE',
           message: this.loadingMessage,
         },
-        this._getTransports()
+        this._getTransportsForPublish()
       );
 
       this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
