@@ -5,6 +5,7 @@
  * @private
  */
 
+import PubNub from 'pubnub';
 import shortid from 'shortid';
 import debounce from 'lodash/debounce';
 import pull from 'lodash/pull';
@@ -16,7 +17,6 @@ import compact from 'lodash/compact';
 import semver from 'semver';
 import validate from 'validate-npm-package-name';
 
-import createMessaging from './Messaging';
 import * as DevSession from './utils/DevSession';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
 import preloadedModules from './configs/preloadedModules';
@@ -24,7 +24,6 @@ import constructExperienceURL from './utils/constructExperienceURL';
 import sendFileUtils from './utils/sendFileUtils';
 import isModulePreloaded from './utils/isModulePreloaded';
 import { convertDependencyFormat } from './utils/projectDependencies';
-import type { Platform } from './types';
 
 let platform = null;
 // + and - are used as delimiters in the uri, ensure they do not appear in the channel itself
@@ -50,7 +49,6 @@ import type {
   ExpoDependencyV2,
   ExpoDependencyResponse,
   ExpoStatusResponse,
-  ExpoMessaging,
 } from './types';
 
 type InitialState = {
@@ -66,6 +64,8 @@ type Module = {
   version?: ?string,
 };
 
+const PRESENCE_TIMEOUT = 600;
+const HEARTBEAT_INTERVAL = 60;
 const MIN_CHANNEL_LENGTH = 6;
 const DEBOUNCE_INTERVAL = 1000;
 const MAX_PUBNUB_SIZE = 31500;
@@ -93,7 +93,7 @@ export default class SnackSession {
   sdkVersion: SDKVersion;
   isVerbose: boolean;
   isStarted: boolean;
-  messaging: ExpoMessaging;
+  pubnub: any;
   channel: string;
   errorListeners: Array<ExpoErrorListener> = [];
   logListeners: Array<ExpoLogListener> = [];
@@ -166,11 +166,15 @@ export default class SnackSession {
       throw new Error('Please use a channel id with more entropy');
     }
 
-    this.messaging = createMessaging({
-      player: options.player,
+    this.pubnub = new PubNub({
+      publishKey: 'pub-c-2a7fd67b-333d-40db-ad2d-3255f8835f70',
+      subscribeKey: 'sub-c-0b655000-d784-11e6-b950-02ee2ddab7fe',
+      ssl: true,
+      presenceTimeout: PRESENCE_TIMEOUT,
+      heartbeatInterval: HEARTBEAT_INTERVAL,
     });
 
-    this.messaging.addListener({
+    this.pubnub.addListener({
       message: ({ message }) => {
         switch (message.type) {
           case 'CONSOLE':
@@ -180,7 +184,7 @@ export default class SnackSession {
             this._handleErrorMessage(message);
             break;
           case 'RESEND_CODE':
-            this._handleResendCodeMessage(message.device);
+            this._handleResendCodeMessage();
             break;
           case 'STATUS_REPORT':
             this._handleStatusReport(message);
@@ -341,14 +345,17 @@ export default class SnackSession {
     return { url: url + '/' + id };
   };
 
-  reloadSnack = async () => {
-    try {
-      await this.messaging.publish(this.channel, { type: 'RELOAD_SNACK' }, this._getTransports());
-
-      this._log('Reloaded successfully!');
-    } catch (e) {
-      this._error('Error reloading app');
-    }
+  reloadSnack = () => {
+    this.pubnub.publish(
+      { channel: this.channel, message: { type: 'RELOAD_SNACK' } },
+      (status, response) => {
+        if (status.error) {
+          this._error(`Error reloading app`);
+        } else {
+          this._log('Reloaded successfully!');
+        }
+      }
+    );
   };
 
   // TODO: error when changing SDK to an unsupported version
@@ -536,16 +543,17 @@ export default class SnackSession {
   };
 
   _requestStatus = () => {
-    if (!this.messaging) {
+    if (!this.pubnub) {
       return;
     }
-
-    try {
-      this.messaging.publish(this.channel, { type: 'REQUEST_STATUS' }, this._getTransports());
-      this._log('Requested Status');
-    } catch (e) {
-      this._error(`Error requesting status: ${e && e.message ? e.message : e}`);
-    }
+    const message = { type: 'REQUEST_STATUS' };
+    this.pubnub.publish({ channel: this.channel, message }, (status, response) => {
+      if (status.error) {
+        this._error(`Error requesting status: ${status.error}`);
+      } else {
+        this._log('Requested Status');
+      }
+    });
   };
 
   getState = () => {
@@ -606,6 +614,7 @@ export default class SnackSession {
     onError: (name: string, e: Error) => mixed
   ): Promise<void> => {
     const sync = async () => {
+      /* $FlowFixMe */
       let dependencies = pickBy(this.dependencies, (value, name: string) =>
         // Only keep dependencies in the modules list
         modules.hasOwnProperty(name)
@@ -673,11 +682,16 @@ export default class SnackSession {
   };
 
   _subscribe = () => {
-    this.messaging.subscribe(this.channel);
+    this.pubnub.subscribe({
+      channels: [this.channel],
+      withPresence: true,
+    });
   };
 
   _unsubscribe = () => {
-    this.messaging.unsubscribe(this.channel);
+    this.pubnub.unsubscribe({
+      channels: [this.channel],
+    });
   };
 
   //s3code: cache of code saved on s3
@@ -755,7 +769,7 @@ export default class SnackSession {
     this._sendLogEvent(message);
   };
 
-  _handleErrorMessage = ({ error, device }: { error?: string, device: ExpoDevice }) => {
+  _handleErrorMessage = ({ error, device }: { error: string, device?: ExpoDevice }) => {
     if (error) {
       let rawErrorObject: ExpoPubnubError = JSON.parse(error);
       let errorObject: ExpoError = {
@@ -783,9 +797,7 @@ export default class SnackSession {
     }
   };
 
-  _handleResendCodeMessage = (device: ExpoDevice) => {
-    // Wrokaround for bug where we might not have received "join"
-    this._handleDeviceDisconnect(device);
+  _handleResendCodeMessage = () => {
     this._publishNotDebouncedAsync();
   };
 
@@ -822,36 +834,12 @@ export default class SnackSession {
     }
   };
 
-  _connectedDevices: ExpoDevice[] = [];
-
-  _getTransports = (): any[] => {
-    if (this.supportsFeature('POSTMESSAGE_TRANSPORT')) {
-      return this._connectedDevices.map(d => (d.platform === 'web' ? 'postMessage' : 'PubNub'));
-    }
-
-    return ['PubNub'];
-  };
-
-  _handleDeviceConnect = (device: ExpoDevice) => {
-    if (!this._connectedDevices.some(d => d.id === device.id)) {
-      this._connectedDevices.push(device);
-    }
-  };
-
-  _handleDeviceDisconnect = (device: ExpoDevice) => {
-    if (!this._connectedDevices.some(d => d.id === device.id)) {
-      this._connectedDevices.push(device);
-    }
-  };
-
   _handleJoinMessage = (device: ExpoDevice) => {
-    this._handleDeviceConnect(device);
     this._publishNotDebouncedAsync();
     this._sendPresenceEvent(device, 'join');
   };
 
   _handleLeaveMessage = (device: ExpoDevice) => {
-    this._handleDeviceDisconnect(device);
     this._sendPresenceEvent(device, 'leave');
   };
 
@@ -865,26 +853,24 @@ export default class SnackSession {
       }
 
       const metadata = this._getAnalyticsMetadata();
-
+      let message;
       await this._handleUploadCodeAsync();
 
-      try {
-        this.messaging.publish(
-          this.channel,
-          {
-            type: 'CODE',
-            diff: cloneDeep(this.diff),
-            s3url: cloneDeep(this.s3url),
-            dependencies: this.dependencies,
-            metadata,
-          },
-          this._getTransports()
-        );
+      message = {
+        type: 'CODE',
+        diff: cloneDeep(this.diff),
+        s3url: cloneDeep(this.s3url),
+        dependencies: this.dependencies,
+        metadata,
+      };
 
-        this._log('Published successfully!');
-      } catch (e) {
-        this._error(`Error publishing code: ${e && e.message ? e.message : e}`);
-      }
+      this.pubnub.publish({ channel: this.channel, message }, (status, response) => {
+        if (status.error) {
+          this._error(`Error publishing code: ${status.error}`);
+        } else {
+          this._log('Published successfully!');
+        }
+      });
     }
   };
 
@@ -894,25 +880,16 @@ export default class SnackSession {
     }
 
     const payload = { type: 'LOADING_MESSAGE', message: this.loadingMessage };
-
-    if (!this.messaging) {
+    if (!this.pubnub) {
       return;
     }
-
-    try {
-      this.messaging.publish(
-        this.channel,
-        {
-          type: 'LOADING_MESSAGE',
-          message: this.loadingMessage,
-        },
-        this._getTransports()
-      );
-
-      this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
-    } catch (e) {
-      this._error(`Error publishing loading event: ${e && e.message ? e.message : e}`);
-    }
+    this.pubnub.publish({ channel: this.channel, message: payload }, (status, response) => {
+      if (status.error) {
+        this._error(`Error publishing loading event: ${status.error}`);
+      } else {
+        this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
+      }
+    });
   };
 
   _getAnalyticsMetadata = () => {
@@ -1001,9 +978,7 @@ export default class SnackSession {
         }?platforms=ios,android,web`
       );
       const res = await fetch(
-        `${this.snackagerUrl}/bundle/${name}${
-          version ? `@${version}` : ''
-        }?platforms=ios,android,web`
+        `${this.snackagerUrl}/bundle/${name}${version ? `@${version}` : ''}?platforms=ios,android,web`
       );
 
       if (res.status === 200) {
