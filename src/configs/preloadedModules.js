@@ -440,4 +440,18 @@ export const dependencies = {
     'react-dom': '16.8.3',
     'react-native-web': '0.11.7',
   },
+  '36.0.0': {
+    '@expo/snack-static': '0.0.1',
+    '@expo/snack-static/react-native-logo.png': '0.0.1',
+    '@expo/vector-icons': '10.0.0',
+    expo: '36.0.0',
+    'expo-asset': '8.0.0',
+    'expo-font': '8.0.0',
+    'expo-constants': '8.0.0',
+    'react-native': '0.61.4',
+    react: '16.9.0',
+    'prop-types': '15.7.2',
+    'react-dom': '16.9.0',
+    'react-native-web': '0.11.7',
+  },
 };
