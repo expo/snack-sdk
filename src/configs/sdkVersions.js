@@ -8,6 +8,7 @@ const minFeatureVersion = {
   PROJECT_DEPENDENCIES: '25.0.0',
   TYPESCRIPT: '31.0.0',
   UNIMODULE_IMPORTS: '33.0.0',
+  POSTMESSAGE_TRANSPORT: '34.0.0',
 };
 
 // special casing of features that have been backported to particular SDK versions
