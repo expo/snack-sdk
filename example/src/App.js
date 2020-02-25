@@ -6,7 +6,6 @@ import QRCode from 'qrcode.react';
 const INITIAL_CODE = `
 import React, { Component } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
-import { Constants } from 'expo';
 
 export default class App extends Component {
   render() {
@@ -26,7 +25,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: Constants.statusBarHeight,
     backgroundColor: '#ecf0f1',
   },
   paragraph: {
@@ -51,7 +49,7 @@ class App extends Component {
       sessionId: Math.random()
         .toString(36)
         .substr(2, 8),
-      sdkVersion: '25.0.0',
+      sdkVersion: '36.0.0',
     });
 
     this._logSubscription = this._snack.addLogListener(this._onLog);
