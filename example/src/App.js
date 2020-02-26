@@ -6,6 +6,7 @@ import QRCode from 'qrcode.react';
 const INITIAL_CODE = `
 import React, { Component } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
+import { Constants } from 'expo';
 
 export default class App extends Component {
   render() {
@@ -25,6 +26,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: Constants.statusBarHeight,
     backgroundColor: '#ecf0f1',
   },
   paragraph: {
