@@ -1,9 +1,10 @@
 /* @flow */
 
 import mapValues from 'lodash/mapValues';
+
 import { sdkSupportsFeature } from '../configs/sdkVersions';
 import type { SDKVersion } from '../configs/sdkVersions';
-import type { ExpoDependencyV1, ExpoDependencyV2 } from '../types';
+import type { ExpoDependencyV2 } from '../types';
 
 export const standardizeDependencies = (dependencies: ExpoDependencyV2, sdkVersion: SDKVersion) => {
   return convertDependencyFormat(
@@ -29,12 +30,12 @@ export const convertDependencyFormat = (dependencies: ExpoDependencyV2, shouldBe
   }
 };
 
-const _isV1 = dependencies => {
-  return Object.keys(dependencies).every(dep => typeof dependencies[dep] === 'string');
+const _isV1 = (dependencies) => {
+  return Object.keys(dependencies).every((dep) => typeof dependencies[dep] === 'string');
 };
 
-const _convertDependenciesV1toV2 = dependencies =>
-  mapValues(dependencies, version => {
+const _convertDependenciesV1toV2 = (dependencies) =>
+  mapValues(dependencies, (version) => {
     const result = {
       version,
       isUserSpecified: true,
@@ -45,4 +46,4 @@ const _convertDependenciesV1toV2 = dependencies =>
     return result;
   });
 
-const _convertDependenciesV2toV1 = dependencies => mapValues(dependencies, dep => dep.version);
+const _convertDependenciesV2toV1 = (dependencies) => mapValues(dependencies, (dep) => dep.version);

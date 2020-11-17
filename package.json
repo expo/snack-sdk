@@ -1,6 +1,6 @@
 {
   "name": "snack-sdk",
-  "version": "2.3.7-rc.0",
+  "version": "2.6.5",
   "description": "The Expo Snack SDK",
   "main": "dist/snack.js",
   "module": "esm/snack.js",
@@ -16,11 +16,15 @@
     "prepare": "yarn build",
     "watch": "gulp watch",
     "test": "cross-env NODE_ENV=test jest --config jest/test-config.json --coverage",
+    "lint": "eslint src --ext '.js'",
     "flow-typed": "flow-typed install",
     "docs": "documentation readme --readme-file API.md --section \"Snack SDK API\" src/SnackSession.js"
   },
   "author": "support@getexponent.com",
   "license": "MIT",
+  "volta": {
+    "node": "12.18.4"
+  },
   "dependencies": {
     "babel-runtime": "^6.23.0",
     "diff": "^3.2.0",
@@ -32,13 +36,7 @@
     "shortid": "^2.2.8",
     "validate-npm-package-name": "^3.0.0"
   },
-  "powertools": {
-    "group": [
-      "snack"
-    ]
-  },
   "devDependencies": {
-    "babel-eslint": "^7.1.0",
     "babel-jest": "^18.0.0",
     "babel-plugin-dynamic-import-node": "^2.0.0",
     "babel-plugin-syntax-dynamic-import": "^6.18.0",
@@ -50,12 +48,9 @@
     "cross-env": "^3.1.3",
     "del": "^3.0.0",
     "documentation": "^4.0.0-rc.1",
-    "eslint": "^3.9.1",
-    "eslint-config-exponent": "^5.0.1",
-    "eslint-plugin-babel": "^4.0.0",
-    "eslint-plugin-flowtype": "^2.25.0",
-    "eslint-plugin-import": "^2.2.0",
-    "eslint-plugin-react": "^6.6.0",
+    "eslint": "^7.2.0",
+    "eslint-config-universe": "^3.0.1",
+    "eslint-plugin-flowtype": "^5.1.3",
     "fetch-mock": "^5.11.0",
     "flow-bin": "^0.83.0",
     "gulp": "^4.0.0",
@@ -66,6 +61,7 @@
     "gulp-rename": "^1.2.2",
     "gulp-shell": "^0.5.2",
     "gulp-sourcemaps": "^1.6.0",
-    "jest": "^18.1.0"
+    "jest": "^18.1.0",
+    "prettier": "^2.0.5"
   }
 }

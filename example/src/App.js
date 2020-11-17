@@ -51,7 +51,7 @@ class App extends Component {
       sessionId: Math.random()
         .toString(36)
         .substr(2, 8),
-      sdkVersion: '25.0.0',
+      sdkVersion: '36.0.0',
     });
 
     this._logSubscription = this._snack.addLogListener(this._onLog);

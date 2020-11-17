@@ -1,5 +1,7 @@
 /* flow */
 
+import type { Logger } from './Logger';
+
 var diff = require('diff');
 
 const getFileDiff = (oldCode: string, newCode: string) => {
@@ -18,7 +20,8 @@ const calcPayloadSize = (channel, manifest) => {
   return encodeURIComponent(channel + JSON.stringify(manifest)).length + 5000;
 };
 
-const uploadCodeToS3 = async (code: string, api: string) => {
+const uploadCodeToS3 = async (code: string, api: string, logger: Logger) => {
+  logger.module('Uploading code', `(${code.length} bytes)`, '...');
   const url = `${api}/--/api/v2/snack/uploadCode`;
   try {
     const response = await fetch(url, {
@@ -27,13 +30,16 @@ const uploadCodeToS3 = async (code: string, api: string) => {
       headers: { 'Content-Type': 'application/json' },
     });
     const data = await response.json();
+    logger.module('Uploaded code', `(${code.length} bytes)`, 'to', data.url);
     return data.url;
   } catch (e) {
+    logger.error('Failed to upload code', `(${code.length} bytes)`, e);
     throw new Error('Unable to upload code to S3: ' + e.message);
   }
 };
 
-const uploadAssetToS3 = async (asset: string, api: string) => {
+const uploadAssetToS3 = async (asset: object, api: string, logger: Logger) => {
+  logger.module('Uploading asset', asset.name, '...');
   const url = `${api}/--/api/v2/snack/uploadAsset`;
   const FD = new FormData();
   FD.append('asset', asset, asset.name);
@@ -43,8 +49,10 @@ const uploadAssetToS3 = async (asset: string, api: string) => {
       body: FD,
     });
     const data = await response.json();
+    logger.module('Uploaded asset', asset.name, 'to', data.url);
     return data.url;
   } catch (e) {
+    logger.error('Failed to upload asset', asset.name, e);
     throw new Error('Unable to upload asset to S3: ' + e.message);
   }
 };

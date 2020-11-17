@@ -23,7 +23,7 @@ export type ExpoWebPlayer = {
   unsubscribe: () => void,
   publish: (message: any) => void,
   listen: (listener: (message: any) => void) => void,
-}
+};
 
 export type ExpoSnackSessionArguments = {
   files: ExpoSnackFiles,
@@ -40,7 +40,8 @@ export type ExpoSnackSessionArguments = {
   disableDevSession?: boolean,
   user: { idToken?: ?string, sessionSecret?: ?string },
   deviceId: ?string,
-  player?: ExpoWebPlayer
+  player?: ExpoWebPlayer,
+  isFocused?: boolean,
 };
 
 export type ExpoSubscription = {
@@ -57,6 +58,13 @@ export type ExpoPresenceListener = (event: ExpoPresenceEvent) => void;
 export type ExpoStateListener = (event: ExpoStateEvent) => void;
 
 export type ExpoDependencyErrorListener = (message: string) => void;
+
+export type ExpoSendBeaconCloseRequest = {
+  url: string,
+  data: Blob,
+};
+
+export type ExpoSendBeaconCloseRequestListener = (closeRequest: ExpoSendBeaconCloseRequest) => void;
 
 export type ExpoErrorLocation = {
   line: number,
@@ -139,6 +147,7 @@ export type ExpoDependencyV2 = {
 export type ExpoDependencyResponse = {
   name: string,
   version: string,
+  handle: string,
   dependencies?: { [key: string]: string },
   error?: Error,
 };
@@ -157,7 +166,9 @@ export type ExpoMessagingListeners = {
       | { type: 'RESEND_CODE', device: ExpoDevice }
       | { type: 'ERROR', error?: string, device: ExpoDevice },
   }): void,
+
   presence(payload: { action: 'join' | 'leave' | 'timeout', uuid: string }): void,
+
   status(payload: {
     category:
       | 'PNConnectedCategory'
@@ -170,8 +181,8 @@ export type ExpoMessagingListeners = {
 
 export type Transport = 'PubNub' | 'postMessage';
 
-export type ExpoMessaging = {
-  addListener(options: ExpoMessagingListeners): void,
+export interface ExpoMessaging {
+  addListener(options: ExpoMessagingListeners): void;
 
   publish(
     channel: string,
@@ -190,11 +201,11 @@ export type ExpoMessaging = {
           metadata: { [key: string]: any },
         },
     transports: Transport[]
-  ): Promise<any[]>,
+  ): Promise<any[]>;
 
-  subscribe(channel: string, transports: Transport[]): void,
+  subscribe(channel: string, transports: Transport[]): void;
 
-  unsubscribe(channel: string, transports: Transport[]): void,
-};
+  unsubscribe(channel: string, transports: Transport[]): void;
+}
 
 export type Platform = 'android' | 'ios' | 'web';

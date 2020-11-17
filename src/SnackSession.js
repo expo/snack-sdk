@@ -5,32 +5,17 @@
  * @private
  */
 
-import shortid from 'shortid';
+import cloneDeep from 'lodash/cloneDeep';
 import debounce from 'lodash/debounce';
-import pull from 'lodash/pull';
 import isEqual from 'lodash/isEqual';
 import pickBy from 'lodash/pickBy';
-import cloneDeep from 'lodash/cloneDeep';
-import difference from 'lodash/difference';
-import compact from 'lodash/compact';
+import pull from 'lodash/pull';
 import semver from 'semver';
+import shortid from 'shortid';
 import validate from 'validate-npm-package-name';
 
 import createMessaging from './Messaging';
-import * as DevSession from './utils/DevSession';
 import { defaultSDKVersion, sdkSupportsFeature } from './configs/sdkVersions';
-import preloadedModules from './configs/preloadedModules';
-import constructExperienceURL from './utils/constructExperienceURL';
-import sendFileUtils from './utils/sendFileUtils';
-import isModulePreloaded from './utils/isModulePreloaded';
-import { convertDependencyFormat } from './utils/projectDependencies';
-import type { Platform, Transport } from './types';
-
-let platform = null;
-// + and - are used as delimiters in the uri, ensure they do not appear in the channel itself
-shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!_');
-
-// eslint-disable-next-line no-duplicate-imports
 import type { SDKVersion, Feature } from './configs/sdkVersions';
 import type {
   ExpoSnackFiles,
@@ -51,7 +36,22 @@ import type {
   ExpoDependencyResponse,
   ExpoStatusResponse,
   ExpoMessaging,
+  ExpoSendBeaconCloseRequest,
+  ExpoSendBeaconCloseRequestListener,
+  Transport,
 } from './types';
+import * as DevSession from './utils/DevSession';
+import createLogger from './utils/Logger';
+import type { Logger } from './utils/Logger';
+import constructExperienceURL from './utils/constructExperienceURL';
+import getSupportedVersion from './utils/getSupportedVersion';
+import isModulePreloaded from './utils/isModulePreloaded';
+import { convertDependencyFormat } from './utils/projectDependencies';
+import sendFileUtils from './utils/sendFileUtils';
+
+let platform = null;
+// + and - are used as delimiters in the uri, ensure they do not appear in the channel itself
+shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!_');
 
 type InitialState = {
   files: ExpoSnackFiles,
@@ -59,11 +59,6 @@ type InitialState = {
   description: ?string,
   dependencies: ExpoDependencyV2,
   sdkVersion?: SDKVersion,
-};
-
-type Module = {
-  name: string,
-  version?: ?string,
 };
 
 const MIN_CHANNEL_LENGTH = 6;
@@ -93,6 +88,7 @@ export default class SnackSession {
   sdkVersion: SDKVersion;
   isVerbose: boolean;
   isStarted: boolean;
+  logger: Logger;
   messaging: ExpoMessaging;
   channel: string;
   errorListeners: Array<ExpoErrorListener> = [];
@@ -100,6 +96,7 @@ export default class SnackSession {
   presenceListeners: Array<ExpoPresenceListener> = [];
   stateListeners: Array<ExpoStateListener> = [];
   dependencyErrorListener: ExpoDependencyErrorListener;
+  sendBeaconCloseRequestListener: ExpoSendBeaconCloseRequestListener;
   host: string;
   name: ?string;
   description: ?string;
@@ -116,6 +113,8 @@ export default class SnackSession {
   deviceId: ?string; // dev
   disableDevSession: boolean;
   pubNubEnabled: boolean = false;
+  openedAt: number;
+  isFocused: ?boolean;
 
   // Public API
   constructor(options: ExpoSnackSessionArguments) {
@@ -130,9 +129,10 @@ export default class SnackSession {
     this.s3code = {};
     this.sdkVersion = options.sdkVersion || defaultSDKVersion;
     this.isVerbose = !!options.verbose;
+    this.logger = createLogger(this.isVerbose);
     this.channel = options.sessionId || shortid.generate();
-    this.host = options.host || 'expo.io';
-    this.expoApiUrl = 'https://expo.io';
+    this.host = options.host || 'exp.host';
+    this.expoApiUrl = 'https://exp.host';
     this.snackagerUrl = 'https://snackager.expo.io';
     this.snackagerCloudfrontUrl = 'https://d37p21p3n8r8ug.cloudfront.net';
     if (options.authorizationToken) {
@@ -150,6 +150,8 @@ export default class SnackSession {
       ...this.user,
     };
     this.deviceId = options.deviceId;
+    this.isFocused = options.isFocused;
+    this.openedAt = Date.now();
 
     this.snackId = options.snackId;
     this.name = options.name;
@@ -169,10 +171,12 @@ export default class SnackSession {
 
     this.messaging = createMessaging({
       player: options.player,
+      logger: this.logger,
     });
 
     this.messaging.addListener({
       message: ({ message }) => {
+        this.logger.comm('Message received', message);
         switch (message.type) {
           case 'CONSOLE':
             this._handleLogMessage(message);
@@ -185,6 +189,7 @@ export default class SnackSession {
             break;
           case 'STATUS_REPORT':
             this._handleStatusReport(message);
+            break;
         }
       },
       presence: ({ action, uuid }) => {
@@ -199,32 +204,36 @@ export default class SnackSession {
 
         switch (action) {
           case 'join':
+            this.logger.comm('Device connected', device);
             this._handleJoinMessage(device);
             break;
           case 'timeout':
           case 'leave':
+            this.logger.comm('Device disconnected', action, device);
             this._handleLeaveMessage(device);
             break;
         }
       },
       status: ({ category }) => {
+        //this.logger.comm('Status changed to', category);
         switch (category) {
           case 'PNConnectedCategory':
             break;
           case 'PNNetworkDownCategory':
           case 'PNNetworkIssuesCategory':
-            this._log('Lost network connection.');
+            this.logger.comm('Lost network connection.');
             break;
           case 'PNReconnectedCategory':
-            this._log('Reconnected to PubNub server.');
+            this.logger.comm('Reconnected to PubNub server.');
             break;
           case 'PNNetworkUpCategory':
-            this._log('Detected network connection. Subscribing to channel.');
+            this.logger.comm('Detected network connection. Subscribing to channel.');
             this._subscribe();
             break;
         }
       },
     });
+    this.logger.info('Session created', this.initialState);
   }
 
   /**
@@ -246,7 +255,7 @@ export default class SnackSession {
   stopAsync = async (): Promise<void> => {
     this.s3url = {};
     this._unsubscribe();
-    this._stopDevSession();
+    await this._stopDevSession();
   };
 
   _startDevSessionAsync = (): Promise<void> => {
@@ -262,6 +271,8 @@ export default class SnackSession {
       apiUrl: this.expoApiUrl,
       user: this.user,
       deviceId: this.deviceId,
+      openedAt: this.openedAt,
+      onSendBeaconCloseRequest: this._handleSendBeaconCloseRequest,
     });
   };
 
@@ -270,8 +281,18 @@ export default class SnackSession {
     return this._startDevSessionAsync();
   };
 
-  _stopDevSession = () => {
-    DevSession.stopSession();
+  _stopDevSession = async () => {
+    await DevSession.stopSession({
+      name: this.name,
+      snackId: this.snackId,
+      sdkVersion: this.sdkVersion,
+      channel: this.channel,
+      host: this.host,
+      apiUrl: this.expoApiUrl,
+      user: this.user,
+      deviceId: this.deviceId,
+      openedAt: this.openedAt,
+    });
   };
 
   /**
@@ -298,7 +319,7 @@ export default class SnackSession {
    * @function
    */
   uploadAssetAsync = async (content: Object): Promise<string> => {
-    return sendFileUtils.uploadAssetToS3(content, this.expoApiUrl);
+    return sendFileUtils.uploadAssetToS3(content, this.expoApiUrl, this.logger);
   };
 
   /**
@@ -313,6 +334,7 @@ export default class SnackSession {
     // remove files that are no longer present in the code
     for (const key in this.files) {
       if (!files.hasOwnProperty(key)) {
+        this.logger.module('File removed', key);
         delete this.diff[key];
         delete this.files[key];
       }
@@ -321,11 +343,13 @@ export default class SnackSession {
     // and add or update the files in the provided code
     for (const key in files) {
       if (!this.files[key] || this.files[key] !== files[key]) {
+        this.logger.module('File', this.files[key] ? 'updated' : 'added', key, files[key]);
         this.files[key] = files[key];
         if (this.files[key].type === 'ASSET' && typeof this.files[key].contents === 'object') {
           this.files[key].contents = await sendFileUtils.uploadAssetToS3(
             this.files[key].contents,
-            this.expoApiUrl
+            this.expoApiUrl,
+            this.logger
           );
         }
       }
@@ -344,15 +368,15 @@ export default class SnackSession {
 
   reloadSnack = async () => {
     try {
+      this.logger.info('Reloading...');
       await this.messaging.publish(
         this.channel,
         { type: 'RELOAD_SNACK' },
         this._getTransportsForPublish()
       );
-
-      this._log('Reloaded successfully!');
+      this.logger.info('Reloaded successfully!');
     } catch (e) {
-      this._error('Error reloading app');
+      this.logger.error('Failed to reload app', e);
     }
   };
 
@@ -360,6 +384,7 @@ export default class SnackSession {
   setSdkVersion = (sdkVersion: SDKVersion): void => {
     if (this.sdkVersion !== sdkVersion) {
       this.sdkVersion = sdkVersion;
+      this.openedAt = Date.now();
 
       this._sendStateEvent();
       this._updateDevSession();
@@ -369,6 +394,7 @@ export default class SnackSession {
   setName = (name: string): void => {
     if (this.name !== name) {
       this.name = name;
+      this.openedAt = Date.now();
 
       this._updateDevSession();
       this._sendStateEvent();
@@ -378,6 +404,7 @@ export default class SnackSession {
   setUser = (user: UserT): void => {
     if (this.user !== user) {
       this.user = user;
+      this.openedAt = Date.now();
 
       this._updateDevSession();
       this._sendStateEvent();
@@ -418,6 +445,15 @@ export default class SnackSession {
       this._unsubscribe();
       this.pubNubEnabled = true;
       this._subscribe();
+    }
+  };
+
+  setFocus = (isFocused: boolean) => {
+    const now = Date.now();
+    this.isFocused = isFocused; // Isn't used yet, but can be used for presence mngt in the future
+    if (isFocused && now !== this.openedAt) {
+      this.openedAt = now;
+      return this._updateDevSession();
     }
   };
 
@@ -503,6 +539,8 @@ export default class SnackSession {
       isDraft: options.isDraft,
     };
 
+    this.logger.info('Saving...', payload);
+
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -516,6 +554,7 @@ export default class SnackSession {
       const data = await response.json();
 
       if (data.id) {
+        this.logger.info('Saved', data);
         this.initialState = cloneDeep({
           sdkVersion: this.sdkVersion,
           files: this.files,
@@ -543,7 +582,7 @@ export default class SnackSession {
         );
       }
     } catch (e) {
-      console.error(e);
+      this.logger.error(e);
       throw e;
     }
   };
@@ -559,9 +598,8 @@ export default class SnackSession {
         { type: 'REQUEST_STATUS' },
         this._getTransportsForPublish()
       );
-      this._log('Requested Status');
     } catch (e) {
-      this._error(`Error requesting status: ${e && e.message ? e.message : e}`);
+      this.logger.error('Failed to request status', e);
     }
   };
 
@@ -593,9 +631,11 @@ export default class SnackSession {
    * @function
    */
   addModuleAsync = async (name: string, version?: string): Promise<void> => {
+    this.logger.module('Adding dependency', name, version, '...');
     const install = async () => {
       try {
         this.dependencies = await this._addModuleAsync(name, version, this.dependencies);
+        this.logger.module('Added dependency', name, version, this.dependencies);
       } finally {
         this._sendStateEvent();
         this._publish();
@@ -607,6 +647,7 @@ export default class SnackSession {
 
   removeModuleAsync = async (name: string): Promise<void> => {
     this.dependencies = pickBy(this.dependencies, (value, key: string) => key !== name);
+    this.logger.module('Removed dependency', name, this.dependencies);
     this._sendStateEvent();
     this._publish();
   };
@@ -621,6 +662,7 @@ export default class SnackSession {
     modules: { [name: string]: ?string },
     onError: (name: string, e: Error) => mixed
   ): Promise<void> => {
+    this.logger.module('Synchronizing dependencies', modules);
     const sync = async () => {
       let dependencies = pickBy(this.dependencies, (value, name: string) =>
         // Only keep dependencies in the modules list
@@ -640,10 +682,13 @@ export default class SnackSession {
       if (!isEqual(dependencies, this.dependencies)) {
         // Update dependencies list
         this.dependencies = dependencies;
+        this.logger.module('Synchronized dependencies', this.dependencies);
 
         // Notify listeners
         this._sendStateEvent();
         this._publish();
+      } else {
+        this.logger.module('Synchronized dependencies (no changes)');
       }
     };
 
@@ -656,15 +701,15 @@ export default class SnackSession {
   _lastModuleSync: Promise<void> = Promise.resolve();
 
   _sendErrorEvent = (errors: Array<ExpoError>): void => {
-    this.errorListeners.forEach(listener => listener(errors));
+    this.errorListeners.forEach((listener) => listener(errors));
   };
 
   _sendLogEvent = (log: ExpoDeviceLog): void => {
-    this.logListeners.forEach(listener => listener(log));
+    this.logListeners.forEach((listener) => listener(log));
   };
 
   _sendPresenceEvent = (device: ExpoDevice, status: ExpoPresenceStatus): void => {
-    this.presenceListeners.forEach(listener =>
+    this.presenceListeners.forEach((listener) =>
       listener({
         device,
         status,
@@ -685,7 +730,7 @@ export default class SnackSession {
   };
 
   _sendStateEvent = (): void => {
-    this.stateListeners.forEach(listener => listener(this.getState()));
+    this.stateListeners.forEach((listener) => listener(this.getState()));
   };
 
   _subscribe = () => {
@@ -730,7 +775,8 @@ export default class SnackSession {
         this.diff[key] = '';
         this.s3url[key] = await sendFileUtils.uploadCodeToS3(
           this.files[key].contents,
-          this.expoApiUrl
+          this.expoApiUrl,
+          this.logger
         );
         size = sendFileUtils.calcPayloadSize(this.channel, {
           diff: this.diff,
@@ -743,7 +789,7 @@ export default class SnackSession {
   // Turn files into diff, s3url, and s3code
   _uploadHelper = async (fileSize: Array<Object>) => {
     await Promise.all(
-      Object.keys(this.files).map(async key => {
+      Object.keys(this.files).map(async (key) => {
         if (!this.files[key]) {
           return;
         } else if (typeof this.files[key].contents === 'object') {
@@ -752,7 +798,8 @@ export default class SnackSession {
           this.diff[key] = '';
           this.s3url[key] = await sendFileUtils.uploadAssetToS3(
             this.files[key].contents,
-            this.expoApiUrl
+            this.expoApiUrl,
+            this.logger
           );
         } else if (this.files[key].contents.startsWith(S3_BUCKET_URL)) {
           // Asset is already uploaded
@@ -772,9 +819,9 @@ export default class SnackSession {
   };
 
   _handleLogMessage = (pubnubEvent: ExpoPubnubDeviceLog) => {
-    let payload = pubnubEvent.payload || [];
+    const payload = pubnubEvent.payload || [];
 
-    let message = {
+    const message = {
       device: pubnubEvent.device,
       method: pubnubEvent.method,
       message: payload.join(' '),
@@ -785,24 +832,28 @@ export default class SnackSession {
 
   _handleErrorMessage = ({ error, device }: { error?: string, device: ExpoDevice }) => {
     if (error) {
-      let rawErrorObject: ExpoPubnubError = JSON.parse(error);
-      let errorObject: ExpoError = {
+      const rawErrorObject: ExpoPubnubError = JSON.parse(error);
+      const errorObject: ExpoError = {
         message: rawErrorObject.message || '',
         device,
         stack: rawErrorObject.stack,
       };
 
       if (rawErrorObject.line) {
-        errorObject.startLine = errorObject.endLine = rawErrorObject.line;
+        errorObject.startLine = rawErrorObject.line;
+        errorObject.endLine = rawErrorObject.line;
       }
 
       if (rawErrorObject.column) {
-        errorObject.startColumn = errorObject.endColumn = rawErrorObject.column;
+        errorObject.startColumn = rawErrorObject.column;
+        errorObject.endColumn = rawErrorObject.column;
       }
 
       if (rawErrorObject.loc) {
-        errorObject.startLine = errorObject.endLine = rawErrorObject.loc.line;
-        errorObject.startColumn = errorObject.endColumn = rawErrorObject.loc.column;
+        errorObject.startLine = rawErrorObject.loc.line;
+        errorObject.endLine = rawErrorObject.loc.line;
+        errorObject.startColumn = rawErrorObject.loc.column;
+        errorObject.endColumn = rawErrorObject.loc.column;
       }
 
       this._sendErrorEvent([errorObject]);
@@ -825,6 +876,7 @@ export default class SnackSession {
       previewLocation,
       status,
     };
+    this.logger.info('Uploading preview...', payload);
 
     try {
       const response = await fetch(url, {
@@ -836,6 +888,7 @@ export default class SnackSession {
       });
       const data = await response.json();
       if (data.id) {
+        this.logger.info('Uploaded preview', data);
         return {
           id: data.id,
         };
@@ -845,7 +898,7 @@ export default class SnackSession {
         );
       }
     } catch (e) {
-      console.error(e);
+      this.logger.error(e);
       throw e;
     }
   };
@@ -856,14 +909,14 @@ export default class SnackSession {
     let transports: Transport[];
 
     if (this.supportsFeature('POSTMESSAGE_TRANSPORT')) {
-      transports = this._connectedDevices.map(
-        d => (d.platform === 'web' ? 'postMessage' : 'PubNub')
+      transports = this._connectedDevices.map((d) =>
+        d.platform === 'web' ? 'postMessage' : 'PubNub'
       );
     } else {
       transports = ['PubNub'];
     }
 
-    return transports.filter(transport => {
+    return transports.filter((transport) => {
       if (transport === 'PubNub') {
         return this.pubNubEnabled;
       }
@@ -873,14 +926,20 @@ export default class SnackSession {
   };
 
   _handleDeviceConnect = (device: ExpoDevice) => {
-    if (!this._connectedDevices.some(d => d.id === device.id)) {
+    if (!this._connectedDevices.some((d) => d.id === device.id)) {
       this._connectedDevices.push(device);
     }
   };
 
   _handleDeviceDisconnect = (device: ExpoDevice) => {
-    if (!this._connectedDevices.some(d => d.id === device.id)) {
+    if (!this._connectedDevices.some((d) => d.id === device.id)) {
       this._connectedDevices.push(device);
+    }
+  };
+
+  _handleSendBeaconCloseRequest = (closeRequest: ExpoSendBeaconCloseRequest) => {
+    if (this.sendBeaconCloseRequestListener) {
+      this.sendBeaconCloseRequestListener(closeRequest);
     }
   };
 
@@ -921,9 +980,9 @@ export default class SnackSession {
           this._getTransportsForPublish()
         );
 
-        this._log('Published successfully!');
+        this.logger.info('Published successfully!');
       } catch (e) {
-        this._error(`Error publishing code: ${e && e.message ? e.message : e}`);
+        this.logger.error('Failed to send code', e);
       }
     }
   };
@@ -932,8 +991,6 @@ export default class SnackSession {
     if (!this.loadingMessage) {
       return;
     }
-
-    const payload = { type: 'LOADING_MESSAGE', message: this.loadingMessage };
 
     if (!this.messaging) {
       return;
@@ -948,10 +1005,8 @@ export default class SnackSession {
         },
         this._getTransportsForPublish()
       );
-
-      this._log(`Sent loading event with message: ${this.loadingMessage || ''}`);
     } catch (e) {
-      this._error(`Error publishing loading event: ${e && e.message ? e.message : e}`);
+      this.logger.error('Failed to send loading event', e);
     }
   };
 
@@ -1007,62 +1062,46 @@ export default class SnackSession {
 
   _publish = debounce(this._publishNotDebouncedAsync, DEBOUNCE_INTERVAL);
 
-  _error = (message: string) => {
-    if (this.isVerbose) {
-      console.error(message);
-    }
-  };
-
-  _log = (message: string) => {
-    if (this.isVerbose) {
-      console.log(message);
-    }
-  };
-
   // ARBITRARY NPM MODULES
 
   _tryFetchDependencyAsync = async (
     name: string,
     version: ?string
   ): Promise<ExpoDependencyResponse> => {
-    let count = 0;
-    let data;
+    const bundleName = `${name}${version ? `@${version}` : ''}`;
+    for (let i = 0; i < 30; i++) {
+      this.logger.module('Resolving dependency', bundleName, '...');
 
-    while (data ? data.pending : true) {
-      if (count > 30) {
-        throw new Error('Request timed out');
-      }
+      const url = `${this.snackagerUrl}/bundle/${bundleName}?${
+        this.supportsFeature('VERSIONED_SNACKAGER') ? 'version_snackager=true&' : ''
+      }platforms=ios,android,web`;
 
-      count++;
-
-      this._log(
-        `Requesting dependency: ${this.snackagerUrl}/bundle/${name}${
-          version ? `@${version}` : ''
-        }?platforms=ios,android,web`
-      );
-      const res = await fetch(
-        `${this.snackagerUrl}/bundle/${name}${
-          version ? `@${version}` : ''
-        }?platforms=ios,android,web`
-      );
+      const res = await fetch(`${url}`);
 
       if (res.status === 200) {
-        data = await res.json();
-
+        const data = await res.json();
         if (data.pending) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          this.logger.module(
+            'Dependency is still being bundled',
+            bundleName,
+            'trying again shortly'
+          );
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        } else {
+          this.logger.module('Resolved dependency', bundleName, data);
+          return data;
         }
       } else {
         const error = await res.text();
+        this.logger.error('Failed to obtain bundle location', bundleName, error);
         throw new Error(error);
       }
     }
 
-    // $FlowFixMe
-    return (data: ExpoDependencyResponse);
+    throw new Error('Request timed out');
   };
 
-  _dependencyPromises: { [id: string]: Promise<ExpoDependencyResponse> } = {};
+  _dependencyPromises: { [id: string]: ?Promise<ExpoDependencyResponse> } = {};
 
   _maybeFetchDependencyAsync = async (
     name: string,
@@ -1092,27 +1131,9 @@ export default class SnackSession {
     this._dependencyPromises[id] = result;
 
     // Remove the promise from cache if it was rejected
-    // $FlowFixMe We are removing a key
     result.catch(() => (this._dependencyPromises[id] = null));
 
     return result;
-  };
-
-  _checkS3ForDepencencyAsync = async (name: string, version: string) => {
-    const hash = (name + '@' + version).replace(/\//g, '~');
-    const promises = ['ios', 'android'].map(async platform => {
-      try {
-        let url = `${this.snackagerCloudfrontUrl}/${encodeURIComponent(hash)}-${platform}/.done`;
-
-        const res = await fetch(url);
-        return res.status < 400;
-      } catch (e) {
-        return false;
-      }
-    });
-
-    let results = await Promise.all(promises);
-    return results.every(result => result);
   };
 
   _addModuleAsync = async (name: string, version: ?string, previous: ExpoDependencyV2) => {
@@ -1127,28 +1148,28 @@ export default class SnackSession {
       return previous;
     }
 
-    const loadingMessage = `Resolving module: ${version ? `${name}@${version}` : name}`;
+    const versionToInstall = version || getSupportedVersion(name, this.sdkVersion) || 'latest';
+
+    const loadingMessage = `Resolving module: ${name}@${versionToInstall}`;
 
     this.isResolving = true;
     this.loadingMessage = loadingMessage;
     this._sendLoadingEvent();
     this._sendStateEvent();
 
-    this._log(loadingMessage);
-
     try {
-      const result = await this._maybeFetchDependencyAsync(name, version || 'latest');
+      const result = await this._maybeFetchDependencyAsync(name, versionToInstall);
       const peerDependencies = result.dependencies;
 
       let dependencies = {
         ...previous,
         [result.name]: {
-          version: version || result.version,
+          version: version || getSupportedVersion(name, this.sdkVersion) || result.version,
           resolved: result.version,
+          handle: result.handle,
           peerDependencies: peerDependencies
             ? Object.keys(peerDependencies).reduce((acc, curr) => {
                 acc[curr] = {
-                  // $FlowFixMe We want the whole try block to fail if result was rejected
                   version: peerDependencies[curr],
                 };
                 return acc;
@@ -1157,8 +1178,8 @@ export default class SnackSession {
         },
       };
 
-      if (peerDependencies) {
-        this._log(`Resolving peer dependencies: ${JSON.stringify(peerDependencies)}`);
+      if (peerDependencies && Object.keys(peerDependencies).length) {
+        this.logger.module('Resolving peer dependencies', peerDependencies, '...');
 
         for (const name of Object.keys(peerDependencies)) {
           // Don't install peer dep if already installed
@@ -1177,7 +1198,7 @@ export default class SnackSession {
 
       return dependencies;
     } catch (e) {
-      this._error(`Error resolving module: ${e.message}`);
+      this.logger.error('Failed to resolve module', e);
 
       if (this.dependencyErrorListener) {
         this.dependencyErrorListener(`Error fetching ${name}@${version || 'latest'}: ${e.message}`);

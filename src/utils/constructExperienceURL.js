@@ -12,9 +12,9 @@ type Props = {
 export default function constructExperienceURL({ sdkVersion, snackId, channel, host }: Props) {
   let hostWithoutSubdomain;
   if (host.includes('snack.expo.io')) {
-    hostWithoutSubdomain = host.replace('snack.expo.io', 'expo.io');
+    hostWithoutSubdomain = host.replace('snack.expo.io', 'exp.host');
   } else if (host.includes('next-snack.expo.io')) {
-    hostWithoutSubdomain = host.replace('next-snack.expo.io', 'expo.io');
+    hostWithoutSubdomain = host.replace('next-snack.expo.io', 'exp.host');
   } else {
     hostWithoutSubdomain = host;
   }
@@ -23,7 +23,7 @@ export default function constructExperienceURL({ sdkVersion, snackId, channel, h
   // Otherwise tell the server to give us the blank snack experience at SDK_VERSION,
   // and append a uuid to the url so that two different users starting a new snack
   // have different ids.
-  let result = snackId
+  const result = snackId
     ? snackId.startsWith('@')
       ? `exp://${hostWithoutSubdomain}/${snackId}+${channel}`
       : `exp://${hostWithoutSubdomain}/@snack/${snackId}+${channel}`

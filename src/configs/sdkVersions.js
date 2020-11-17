@@ -8,17 +8,19 @@ const minFeatureVersion = {
   PROJECT_DEPENDENCIES: '25.0.0',
   TYPESCRIPT: '31.0.0',
   UNIMODULE_IMPORTS: '33.0.0',
-  POSTMESSAGE_TRANSPORT: '34.0.0',
+  POSTMESSAGE_TRANSPORT: '35.0.0',
+  VERSIONED_SNACKAGER: '37.0.0',
 };
 
 // special casing of features that have been backported to particular SDK versions
 export const versions = {
-  '33.0.0': [],
-  '34.0.0': [],
-  '35.0.0': [],
+  '36.0.0': [],
+  '37.0.0': [],
+  '38.0.0': [],
+  '39.0.0': [],
 };
 
-export const defaultSDKVersion = '34.0.0';
+export const defaultSDKVersion = '39.0.0';
 
 export type Feature = $Keys<typeof minFeatureVersion>;
 export type SDKVersion = $Keys<typeof versions>;

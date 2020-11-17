@@ -131,7 +131,7 @@ This will upload the current code to Expo's servers and return a url that points
 const downloadURL = await session.downloadAsync();
 
 console.log(downloadURL);
-// This will print: { url: "https://expo.io/--/api/v2/snack/download/snackIDHere" }
+// This will print: { url: "https://exp.host/--/api/v2/snack/download/snackIDHere" }
 ```
 
 This will return a link to our server with a `.zip` of your Snack project. You'll be able to run this exported project using `exp` or XDE.
